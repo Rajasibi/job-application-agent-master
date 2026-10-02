@@ -1,0 +1,208 @@
+{
+  "id": "indeed-scraper-workflow",
+  "name": "Scraper — Indeed",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 2-23/4 * * *"
+            }
+          ]
+        }
+      },
+      "id": "32fa67fe-126b-4679-96d8-2ae823c3a173",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "926841c1-5cc7-427a-aeb9-8daa61ea8a57",
+      "name": "Run Manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "run-scraper-indeed",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "2cdf408a-3dc9-4eb0-b12e-b5523cd70e6c",
+      "webhookId": "471c6954-46fc-404f-a289-09e7942b13f8",
+      "name": "Run From Dashboard",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9999/scrape/indeed",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({}) }}",
+        "options": {
+          "timeout": 2400000
+        }
+      },
+      "id": "d6e1e842-5984-49d7-af7d-b065e635c6fa",
+      "name": "Scrape indeed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const r = $input.first().json;\nif (r.error) throw new Error('Scraper error: ' + r.error);\nreturn (r.jobs || []).map(j => ({ json: j }));"
+      },
+      "id": "d480c571-9b4b-4311-b6a0-e62efa0ea331",
+      "name": "One Item Per Job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5678/webhook/score-job",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 5400000
+        }
+      },
+      "id": "e8db73a3-70f7-4520-88d3-d62f38027307",
+      "name": "Score Job (one at a time)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "d1a73cea-9405-4887-a88b-dcb638641fe7",
+      "name": "Loop Over Jobs",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        900,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Scrape indeed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Manually": {
+      "main": [
+        [
+          {
+            "node": "Scrape indeed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run From Dashboard": {
+      "main": [
+        [
+          {
+            "node": "Scrape indeed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape indeed": {
+      "main": [
+        [
+          {
+            "node": "One Item Per Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One Item Per Job": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Jobs": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Score Job (one at a time)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score Job (one at a time)": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

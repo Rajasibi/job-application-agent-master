@@ -1,0 +1,50 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>GenAI Engineer - Acme | Naukri.com</title></head>
+<body>
+<h1>GenAI Engineer</h1><p>Acme Pvt Ltd, Chennai</p>
+<button id="apply-button" onclick="fetch('/__submitted'); start()">Apply</button>
+<p id="msg"></p>
+<!-- Naukri-like recruiter-question drawer. ?unknown=1 asks a question with no trusted answer. -->
+<div class="chatbot_DrawerContentWrapper" id="drawer" style="display:none">
+  <ul id="msgs"></ul>
+  <div id="opts"></div>
+  <div class="textArea" contenteditable="true" id="input" style="border:1px solid #999;min-height:20px"></div>
+  <div class="sendMsg" id="send" onclick="answer()" style="cursor:pointer">Save</div>
+</div>
+<script>
+  const unknown = new URLSearchParams(location.search).get('unknown') === '1';
+  const QUESTIONS = unknown
+    ? [{ q: 'Why do you want to join our company?', ok: () => false }]
+    : [
+        { q: 'What is your notice period in days?', ok: a => /^(0|immediate)/i.test(a) },
+        { q: 'How many years of experience do you have in Python?', ok: a => a.trim() === '3' },
+        { q: 'Are you willing to relocate?', radio: ['Yes', 'No'], ok: a => a === 'No' }
+      ];
+  let i = 0;
+  function show() {
+    const q = QUESTIONS[i];
+    const li = document.createElement('li');
+    li.className = 'botItem';
+    li.innerHTML = `<div class="botMsg"><span></span></div>`;
+    li.querySelector('span').textContent = q.q;
+    document.getElementById('msgs').appendChild(li);
+    const opts = document.getElementById('opts');
+    opts.innerHTML = (q.radio || []).map((o, n) => `<label for="r${i}_${n}">${o}</label><input type="radio" name="r${i}" id="r${i}_${n}" value="${o}">`).join('');
+  }
+  function start() { document.getElementById('drawer').style.display = 'block'; show(); }
+  function answer() {
+    const q = QUESTIONS[i];
+    const input = document.getElementById('input');
+    const picked = document.querySelector('#opts input:checked');
+    const a = q.radio ? (picked ? picked.value : '') : input.textContent;
+    input.textContent = '';
+    if (!q.ok(a)) return; // wrong answer: the same question stays
+    const u = document.createElement('li'); u.className = 'userItem'; u.textContent = a; document.getElementById('msgs').appendChild(u);
+    i++;
+    if (i < QUESTIONS.length) return show();
+    document.getElementById('drawer').style.display = 'none';
+    document.getElementById('msg').textContent = 'You have successfully applied to this job';
+    document.getElementById('apply-button').textContent = 'Applied';
+  }
+</script>
+</body></html>

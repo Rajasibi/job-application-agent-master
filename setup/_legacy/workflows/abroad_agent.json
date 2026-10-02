@@ -1,0 +1,99 @@
+{
+  "name": "Executor — Abroad Agent (EU)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "apply-abroad",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-apply-abroad",
+      "name": "Webhook: /apply-abroad",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const data = $input.first().json.body || $input.first().json;\nconst platform = (data.source_platform || '').toLowerCase();\n\nlet scriptName;\nif (platform.includes('linkedin')) {\n  scriptName = 'linkedin_apply.js';\n} else {\n  // WTTJ, EuroJobs, Indeed EU — use LinkedIn script as base (handles general apply flows)\n  scriptName = 'linkedin_apply.js';\n}\n\n// Always ensure cover letter is included for EU applications\nconst coverLetterPath = data.coverLetterPath || '';\n\nreturn [{ json: { ...data, scriptName, coverLetterPath, is_eu_application: true } }];"
+      },
+      "id": "fn-abroad-router",
+      "name": "EU Platform Router",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const stdout = $input.first().json.stdout || '';\nconst prev = $('EU Platform Router').first().json;\n\nlet result;\ntry {\n  const jsonMatch = stdout.match(/\\{[\\s\\S]*\\}/);\n  result = jsonMatch ? JSON.parse(jsonMatch[0]) : { success: false, error: 'No JSON in output' };\n} catch (e) {\n  result = { success: false, error: `Parse error: ${e.message}` };\n}\n\nreturn [{\n  json: {\n    ...prev,\n    apply_success: result.success,\n    screenshot_path: result.screenshot || '',\n    error_message: result.error || '',\n    status: result.success ? 'APPLIED' : 'FAILED'\n  }\n}];"
+      },
+      "id": "fn-parse-abroad-result",
+      "name": "Parse Result",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://localhost:5678/webhook/log-application",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify($json)}}",
+        "options": {}
+      },
+      "id": "http-log-abroad",
+      "name": "Log to Sheets",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1120,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: /apply-abroad": {
+      "main": [
+        [
+          {
+            "node": "EU Platform Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EU Platform Router": {
+      "main": [
+        []
+      ]
+    },
+    "Parse Result": {
+      "main": [
+        [
+          {
+            "node": "Log to Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "abroad-agent-workflow"
+}

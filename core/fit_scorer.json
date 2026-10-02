@@ -1,0 +1,371 @@
+{
+  "id": "fit-scorer-workflow",
+  "name": "Fit Scorer — Ollama (Qwen)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "score-job",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "347ec1da-ff5e-4af8-9406-81483b786e4c",
+      "webhookId": "7744ac5a-3675-4d7e-a78f-78abd9047a35",
+      "name": "Webhook: /score-job",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9999/prompt",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ kind: 'score', job: $json.body }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "3f4989aa-6c9d-47cb-bd02-0b40cb17ab00",
+      "name": "Build Score Prompt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.ollama_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.ollama_request) }}",
+        "options": {
+          "timeout": 1500000
+        }
+      },
+      "id": "4b2f1911-2dde-4131-bfe2-010913a225eb",
+      "name": "Ollama — Score",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9999/parse-score",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ job: $('Build Score Prompt').item.json.job, content: $json.message?.content || '', final: false }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "dba011b8-91f5-445f-8876-5a80a8871c6d",
+      "name": "Parse Score",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "cb103da6-b99f-4ef1-8b6e-b4f6f31a1083",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "494440c5-29a0-48c4-be6b-a4ef9834ded8",
+      "name": "Parsed OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Build Score Prompt').item.json.ollama_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('Build Score Prompt').item.json.ollama_request) }}",
+        "options": {
+          "timeout": 1500000
+        }
+      },
+      "id": "2238b7b8-b9a1-440d-b7dc-5d43cdcf1b07",
+      "name": "Ollama — Retry",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9999/parse-score",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ job: $('Build Score Prompt').item.json.job, content: $json.message?.content || '', final: true }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "f1329a91-3c25-4729-86f7-34ec10f2803d",
+      "name": "Parse Retry",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "69b68645-6c10-4141-a233-f9ca7c0fee1c",
+              "leftValue": "={{ $json.passed }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "69bdc50c-a358-445c-bcb5-4dd464918c3c",
+      "name": "Score ≥ Threshold?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1780,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5678/webhook/build-cv",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.job) }}",
+        "options": {
+          "timeout": 4200000
+        }
+      },
+      "id": "dc832f99-835b-47d8-90f3-472da65356bd",
+      "name": "Build CV + Apply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2000,
+        300
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5678/webhook/log-application",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ ...$json.job, status: 'REJECTED', notes: $json.job.rejection_reason }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "e2315ee8-dbd7-4ecb-870e-a1c2f042c0b9",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5678/webhook/log-application",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ ...$('Score ≥ Threshold?').item.json.job, status: 'FAILED', notes: 'CV builder / apply failed: ' + ($json.error?.message || $json.error || 'unknown error') }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "543b6f42-e38b-43b5-9085-e489d8f6541c",
+      "name": "Log Pipeline Failure",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2440,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: /score-job": {
+      "main": [
+        [
+          {
+            "node": "Build Score Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Score Prompt": {
+      "main": [
+        [
+          {
+            "node": "Ollama — Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama — Score": {
+      "main": [
+        [
+          {
+            "node": "Parse Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Score": {
+      "main": [
+        [
+          {
+            "node": "Parsed OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsed OK?": {
+      "main": [
+        [
+          {
+            "node": "Score ≥ Threshold?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ollama — Retry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama — Retry": {
+      "main": [
+        [
+          {
+            "node": "Parse Retry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Retry": {
+      "main": [
+        [
+          {
+            "node": "Score ≥ Threshold?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score ≥ Threshold?": {
+      "main": [
+        [
+          {
+            "node": "Build CV + Apply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Rejection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build CV + Apply": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Log Pipeline Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

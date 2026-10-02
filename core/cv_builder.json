@@ -1,0 +1,323 @@
+{
+  "id": "cv-builder-workflow",
+  "name": "CV Builder + Router — Ollama (Qwen)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "build-cv",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "438cde12-af7a-424d-a740-219cf772f127",
+      "webhookId": "0c9aeee9-7c03-445a-8735-28fb0c10964a",
+      "name": "Webhook: /build-cv",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9999/prompt",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ kind: 'cv', job: $json.body }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "8290fae8-97fa-4731-bf11-d744d8cb3910",
+      "name": "Build CV Prompt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.ollama_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.ollama_request) }}",
+        "options": {
+          "timeout": 1500000
+        }
+      },
+      "id": "19574f60-d76c-4eb4-aa7e-0353006ee9f4",
+      "name": "Ollama — Tailor CV",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9999/save-cv",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ job: $('Build CV Prompt').item.json.job, content: $json.message?.content || '' }) }}",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "30936c16-9bdd-45d4-9458-4bc7eead71e2",
+      "name": "Save CV (md + pdf)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "a6d3d006-f71d-464e-9b10-774749f931f2",
+              "leftValue": "={{ $json.job.cover_letter_needed }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4d56dc78-a8a7-4c93-a6d6-fb08b41c8648",
+      "name": "Cover Letter Needed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9999/prompt",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ kind: 'cover', job: $json.job }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "cdc4ddfd-c9c3-4cd7-b521-8116b140cd5d",
+      "name": "Build Cover Letter Prompt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.ollama_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.ollama_request) }}",
+        "options": {
+          "timeout": 1500000
+        }
+      },
+      "id": "90e60e1c-926a-419a-9522-9f94378d6185",
+      "name": "Ollama — Cover Letter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9999/save-cover-letter",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ job: $('Build Cover Letter Prompt').item.json.job, content: $json.message?.content || '' }) }}",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "348537f8-8dd9-494e-aa3e-01490efdedf4",
+      "name": "Save Cover Letter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1780,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// tier1_* -> Tier 1 agent, India jobs -> India agent, everything else -> Abroad agent\nconst job = $json.job;\nconst p = String(job.source_platform || '');\nconst target = p.startsWith('tier1') ? 'apply-tier1' : (job.region === 'india' ? 'apply-india' : 'apply-abroad');\nreturn { json: { job, target } };"
+      },
+      "id": "51c166b4-cbcf-4482-b448-f84faa613731",
+      "name": "Router",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://127.0.0.1:5678/webhook/{{ $json.target }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.job) }}",
+        "options": {
+          "timeout": 900000
+        }
+      },
+      "id": "1deef563-6c82-4886-ab25-a79b5d9be13c",
+      "name": "Send to Executor Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2220,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: /build-cv": {
+      "main": [
+        [
+          {
+            "node": "Build CV Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build CV Prompt": {
+      "main": [
+        [
+          {
+            "node": "Ollama — Tailor CV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama — Tailor CV": {
+      "main": [
+        [
+          {
+            "node": "Save CV (md + pdf)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save CV (md + pdf)": {
+      "main": [
+        [
+          {
+            "node": "Cover Letter Needed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cover Letter Needed?": {
+      "main": [
+        [
+          {
+            "node": "Build Cover Letter Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Cover Letter Prompt": {
+      "main": [
+        [
+          {
+            "node": "Ollama — Cover Letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama — Cover Letter": {
+      "main": [
+        [
+          {
+            "node": "Save Cover Letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Cover Letter": {
+      "main": [
+        [
+          {
+            "node": "Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Router": {
+      "main": [
+        [
+          {
+            "node": "Send to Executor Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

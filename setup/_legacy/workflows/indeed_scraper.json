@@ -1,0 +1,256 @@
+[
+  {
+    "updatedAt": "2026-05-07T09:40:16.000Z",
+    "createdAt": "2026-05-05T11:49:07.776Z",
+    "id": "indeed-scraper-workflow",
+    "name": "Scraper — Indeed",
+    "description": null,
+    "active": false,
+    "isArchived": false,
+    "nodes": [
+      {
+        "parameters": {
+          "functionCode": "const searches = [{\"q\": \"AI Operations Manager\", \"l\": \"Delhi, India\", \"platform\": \"indeed_india\"}, {\"q\": \"AI Project Manager\", \"l\": \"Delhi, India\", \"platform\": \"indeed_india\"}, {\"q\": \"AI Customer Success\", \"l\": \"Delhi, India\", \"platform\": \"indeed_india\"}, {\"q\": \"AI Strategy Consultant\", \"l\": \"India\", \"platform\": \"indeed_india\"}, {\"q\": \"Customer Success Manager\", \"l\": \"Delhi, India\", \"platform\": \"indeed_india\"}, {\"q\": \"Project Manager\", \"l\": \"Delhi NCR\", \"platform\": \"indeed_india\"}, {\"q\": \"Operations Manager\", \"l\": \"Delhi NCR\", \"platform\": \"indeed_india\"}, {\"q\": \"AI Operations\", \"l\": \"Netherlands\", \"platform\": \"indeed_eu\"}, {\"q\": \"AI Customer Success\", \"l\": \"Europe\", \"platform\": \"indeed_eu\"}, {\"q\": \"Customer Success Manager\", \"l\": \"Netherlands\", \"platform\": \"indeed_eu\"}];\nreturn searches.map(s => ({\n  json: {\n    url: `https://in.indeed.com/jobs?q=${encodeURIComponent(s.q)}&l=${encodeURIComponent(s.l)}&fromage=1&sort=date&limit=20`,\n    source_platform: s.platform\n  }\n}));"
+        },
+        "id": "fn-build-indeed-urls",
+        "name": "Build Search URLs",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [
+          460,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "={{$json.url}}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "User-Agent",
+                "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+              },
+              {
+                "name": "Accept-Language",
+                "value": "en-US,en;q=0.9"
+              },
+              {
+                "name": "Accept",
+                "value": "text/html"
+              }
+            ]
+          },
+          "options": {
+            "timeout": 15000,
+            "batching": {
+              "batch": {
+                "batchSize": 1,
+                "batchInterval": 5000
+              }
+            },
+            "retry": {
+              "enabled": true,
+              "maxTries": 3,
+              "waitBetweenTries": 10000
+            }
+          }
+        },
+        "id": "http-fetch-indeed",
+        "name": "Fetch Indeed Results",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [
+          680,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "functionCode": "const html = typeof $input.first().json === 'string' ? $input.first().json : ($input.first().json.data || '');\nconst sourcePlatform = $('Build Search URLs').first().json.source_platform;\n\nconst jobs = [];\n\n// Extract job IDs from Indeed HTML\nconst jkMatches = html.match(/data-jk=\"([a-zA-Z0-9]+)\"/g) || [];\nconst titleMatches = html.match(/class=\"jobTitle[^\"]*\"[^>]*><[^>]+>([^<]+)<\\/span>/g) || [];\nconst companyMatches = html.match(/data-testid=\"company-name\"[^>]*>([^<]+)</g) || [];\nconst locationMatches = html.match(/data-testid=\"text-location\"[^>]*>([^<]+)</g) || [];\n\nconst seenIds = new Set();\nfor (let i = 0; i < jkMatches.length; i++) {\n  const idMatch = jkMatches[i].match(/\"([a-zA-Z0-9]+)\"/);\n  if (!idMatch) continue;\n  const jk = idMatch[1];\n  if (seenIds.has(jk)) continue;\n  seenIds.add(jk);\n\n  const title = titleMatches[i] ? titleMatches[i].replace(/<[^>]+>/g, '').trim() : 'Unknown';\n  const company = companyMatches[i] ? companyMatches[i].replace(/<[^>]+>/g, '').trim() : 'Unknown';\n  const location = locationMatches[i] ? locationMatches[i].replace(/<[^>]+>/g, '').trim() : 'Unknown';\n\n  jobs.push({\n    job_id: jk,\n    job_title: title,\n    company: company,\n    location: location,\n    job_url: `https://in.indeed.com/viewjob?jk=${jk}`,\n    source_platform: sourcePlatform\n  });\n}\n\nreturn jobs.map(j => ({ json: j }));"
+        },
+        "id": "fn-parse-indeed",
+        "name": "Parse Indeed Results",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [
+          900,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "functionCode": "const fs = require('fs');\nconst path = require('path');\n\nconst cacheDir = 'C:/Users/Dev/Desktop/Job Agents/job-agent/setup/cache';\nif (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });\n\n// Per-platform cache file\nconst item = $input.first().json;\nconst platform = item.source_platform || 'unknown';\nconst cacheFile = path.join(cacheDir, `seen_${platform.replace(/[^a-z0-9_]/gi, '_')}.json`);\n\nlet seen = [];\ntry { seen = JSON.parse(fs.readFileSync(cacheFile, 'utf-8')); } catch (e) {}\n\nconst url = item.job_url || item.job_id || '';\nif (!url) return [];\nif (seen.includes(url)) return []; // Already seen\n\nseen.push(url);\nif (seen.length > 5000) seen = seen.slice(-3000);\nfs.writeFileSync(cacheFile, JSON.stringify(seen));\n\nreturn [{ json: item }];"
+        },
+        "id": "fn-dedup-indeed",
+        "name": "Deduplicate",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [
+          1120,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "={{$json.job_url}}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "User-Agent",
+                "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+              }
+            ]
+          },
+          "options": {
+            "timeout": 10000
+          }
+        },
+        "id": "http-fetch-indeed-jd",
+        "name": "Fetch JD Page",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [
+          1340,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "functionCode": "const html = typeof $input.first().json === 'string' ? $input.first().json : ($input.first().json.data || '');\nconst prev = $('Deduplicate').first().json;\n\nconst descMatch = html.match(/id=\"jobDescriptionText\"[^>]*>([\\s\\S]*?)<\\/div>/);\nlet description = '';\nif (descMatch) {\n  description = descMatch[1].replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim();\n}\nif (!description || description.length < 50) {\n  description = `${prev.job_title} at ${prev.company}, ${prev.location}. See: ${prev.job_url}`;\n}\n\nreturn [{ json: { ...prev, description: description.substring(0, 3000) } }];"
+        },
+        "id": "fn-extract-indeed-jd",
+        "name": "Extract JD",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [
+          1560,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=http://127.0.0.1:5678/webhook/score-job",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{JSON.stringify($json)}}",
+          "options": {}
+        },
+        "id": "http-trigger-scorer-indeed",
+        "name": "Trigger Fit Scorer",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [
+          1780,
+          300
+        ]
+      }
+    ],
+    "connections": {
+      "Build Search URLs": {
+        "main": [
+          [
+            {
+              "node": "Fetch Indeed Results",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch Indeed Results": {
+        "main": [
+          [
+            {
+              "node": "Parse Indeed Results",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse Indeed Results": {
+        "main": [
+          [
+            {
+              "node": "Deduplicate",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Deduplicate": {
+        "main": [
+          [
+            {
+              "node": "Fetch JD Page",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch JD Page": {
+        "main": [
+          [
+            {
+              "node": "Extract JD",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Extract JD": {
+        "main": [
+          [
+            {
+              "node": "Trigger Fit Scorer",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null,
+    "meta": null,
+    "pinData": null,
+    "versionId": "46ac6409-daea-47e5-95c0-fe2a5f756684",
+    "activeVersionId": "46ac6409-daea-47e5-95c0-fe2a5f756684",
+    "versionCounter": 33,
+    "triggerCount": 1,
+    "tags": [],
+    "shared": [
+      {
+        "updatedAt": "2026-05-05T11:49:07.783Z",
+        "createdAt": "2026-05-05T11:49:07.783Z",
+        "role": "workflow:owner",
+        "workflowId": "indeed-scraper-workflow",
+        "projectId": "XxRfzNcZZPKbVFJ4",
+        "project": {
+          "updatedAt": "2025-09-11T18:16:29.262Z",
+          "createdAt": "2025-09-11T18:15:47.340Z",
+          "id": "XxRfzNcZZPKbVFJ4",
+          "name": "Dev Rajput <rajputdev77@gmail.com>",
+          "type": "personal",
+          "icon": null,
+          "description": null,
+          "creatorId": "10df8a02-98c1-4628-8f50-17fb05a8dd57"
+        }
+      }
+    ],
+    "versionMetadata": {
+      "name": null,
+      "description": null
+    }
+  }
+]

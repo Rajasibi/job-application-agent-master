@@ -1,0 +1,154 @@
+{
+  "id": "tier1-agent-workflow",
+  "name": "Executor — Tier 1 Agent (Capgemini / Accenture / JLL / CBRE / EY)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "apply-tier1",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "48ee16f2-d9a7-418a-8749-326f64cc56b8",
+      "webhookId": "7b331895-6098-49a1-8d2a-a48a6e8b54ea",
+      "name": "Webhook: /apply-tier1",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9999/apply",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ job: $json.body }) }}",
+        "options": {
+          "timeout": 900000
+        }
+      },
+      "id": "04826e8d-4494-4aad-80cb-4bfcedacde65",
+      "name": "Prepare Application (review mode)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "0f6124ea-0b8d-40a1-921b-a992e287b294",
+              "leftValue": "={{ $json.job.skipped }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "90241513-09d8-4727-914d-eab0a84b3dc8",
+      "name": "Skipped?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "d0e96dac-06cf-4505-bba0-2f63109ec53e",
+      "name": "Already Handled / Daily Cap",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5678/webhook/log-application",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.job) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "c139022f-0b9f-49e5-90dd-eb4c5ebefe4b",
+      "name": "Log Result",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: /apply-tier1": {
+      "main": [
+        [
+          {
+            "node": "Prepare Application (review mode)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Application (review mode)": {
+      "main": [
+        [
+          {
+            "node": "Skipped?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skipped?": {
+      "main": [
+        [
+          {
+            "node": "Already Handled / Daily Cap",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

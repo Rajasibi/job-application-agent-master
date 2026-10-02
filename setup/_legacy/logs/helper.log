@@ -1,0 +1,79 @@
+[2026-05-07T16:43:26.571Z] Helper service listening on http://127.0.0.1:9999
+[2026-05-07T16:43:36.811Z] RUN: echo helper works
+[2026-05-07T16:43:36.847Z] EXIT 0: stdout=14b stderr=0b
+[2026-05-07T16:58:19.809Z] RUN: node playwright/linkedin_apply.js --url https://linkedin.com/jobs/view/test --cv test.md --company TestCo --title TestRole --dry-run
+[2026-05-07T16:58:20.820Z] EXIT 0: stdout=130b stderr=0b
+[2026-05-07T17:33:48.883Z] Helper service listening on http://127.0.0.1:9999
+[2026-05-08T07:22:48.878Z] Helper service listening on http://127.0.0.1:9999
+[2026-05-09T05:21:24.185Z] Helper service listening on http://127.0.0.1:9999
+[2026-05-09T05:21:55.194Z] RUN: node playwright/scrape_naukri.js
+[2026-05-09T08:00:18.138Z] RUN: node playwright/scrape_indeed.js
+[2026-05-09T08:00:36.156Z] RUN: node playwright/scrape_naukri.js
+[2026-05-09T10:00:52.361Z] RUN: node playwright/scrape_tier1.js
+[2026-05-09T12:00:18.057Z] RUN: node playwright/scrape_indeed.js
+[2026-05-09T12:00:36.052Z] RUN: node playwright/scrape_naukri.js
+[2026-05-09T16:00:18.055Z] RUN: node playwright/scrape_indeed.js
+[2026-05-09T16:00:36.047Z] RUN: node playwright/scrape_naukri.js
+[2026-05-09T16:00:52.068Z] RUN: node playwright/scrape_tier1.js
+[2026-05-12T14:21:16.361Z] Helper service listening on http://127.0.0.1:9999
+[2026-05-12T14:21:59.146Z] RUN: node playwright/scrape_naukri.js
+[2026-05-12T14:24:06.500Z] RUN: node playwright/scrape_naukri.js
+[2026-05-12T14:25:34.356Z] RUN: node playwright/scrape_naukri.js
+[2026-05-12T14:25:37.633Z] RUN: node playwright/scrape_naukri.js
+[2026-05-12T14:26:08.385Z] RUN: node playwright/scrape_naukri.js
+[2026-05-12T14:26:11.619Z] RUN: node playwright/scrape_naukri.js
+[2026-05-12T14:27:16.072Z] RUN: node playwright/scrape_indeed.js
+[2026-05-12T14:27:18.140Z] RUN: node playwright/scrape_indeed.js
+[2026-05-12T14:28:07.146Z] RUN: node playwright/scrape_indeed.js
+[2026-05-12T14:28:41.545Z] RUN: node playwright/scrape_tier1.js
+[2026-05-12T14:28:42.032Z] RUN: node playwright/scrape_tier1.js
+[2026-05-12T14:29:30.311Z] RUN: node playwright/scrape_tier1.js
+[2026-05-12T16:00:22.519Z] RUN: node playwright/scrape_indeed.js
+[2026-05-12T16:00:24.513Z] RUN: node playwright/scrape_naukri.js
+[2026-05-12T16:00:36.494Z] RUN: node playwright/scrape_tier1.js
+[2026-05-12T16:00:54.515Z] RUN: node playwright/scrape_wttj.js
+[2026-05-12T16:30:53.693Z] RUN: node playwright/scrape_naukri.js
+[2026-05-12T16:32:27.230Z] RUN: node playwright/scrape_indeed.js
+[2026-05-12T16:33:38.780Z] RUN: node playwright/scrape_tier1.js
+[2026-05-12T20:35:47.168Z] RUN: node playwright/scrape_indeed.js
+[2026-05-12T20:35:47.202Z] RUN: node playwright/scrape_naukri.js
+[2026-05-14T12:33:54.398Z] RUN: node playwright/scrape_naukri.js
+[2026-05-14T12:35:28.646Z] RUN: node playwright/scrape_indeed.js
+[2026-05-14T12:36:53.360Z] RUN: node playwright/scrape_tier1.js
+[2026-05-21T10:42:20.093Z] Helper service listening on http://127.0.0.1:9999
+[2026-05-21T10:53:08.348Z] RUN: node playwright/linkedin_apply.js --url https://www.linkedin.com/jobs/view/4196891234 --cv "C:/Users/Dev/Desktop/Job Agents/job-agent/cv/cv_variant_b.md" --company Amazon --title "Operations Manager"
+[2026-05-21T11:09:47.827Z] RUN: node playwright/linkedin_apply.js --url "https://www.linkedin.com/jobs/view/4413566298" --cv "C:/Users/Dev/Desktop/Job Agents/job-agent/output/tailored_cv_ASSPL_-_Karnataka_Operations_Manager__Amazon_2026-05-21T11-08-01-703Z.md" --coverletter "C:/Users/Dev/Desktop/Job Agents/job-agent/output/cover_letter_ASSPL_-_Karnataka_Operations_Manager__Amazon_2026-05-21T11-08-48-777Z.txt" --company "ASSPL - Karnataka" --title "Operations Manager, Amazon"
+[2026-05-21T11:10:28.972Z] RUN: node playwright/linkedin_apply.js --url "https://www.linkedin.com/jobs/view/4413566298" --cv "C:/Users/Dev/Desktop/Job Agents/job-agent/output/tailored_cv_ASSPL_-_Karnataka_Operations_Manager__Amazon_2026-05-21T11-08-01-703Z.md" --coverletter "C:/Users/Dev/Desktop/Job Agents/job-agent/output/cover_letter_ASSPL_-_Karnataka_Operations_Manager__Amazon_2026-05-21T11-08-48-777Z.txt" --company "ASSPL - Karnataka" --title "Operations Manager, Amazon"
+[2026-05-21T11:16:31.583Z] RUN: node playwright/scrape_tier1.js
+[2026-05-21T11:22:22.823Z] Tier 1 queued: undefined - undefined
+[2026-05-21T11:32:46.538Z] Tier 1 queued: EY - Senior Project Manager - Business Consulting
+[2026-05-21T11:39:27.314Z] Opening Tier 1 form for: EY
+[2026-05-21T11:39:27.320Z] RUN: node playwright/tier1_form_fill.js --url "https://careers.ey.com/ey/job/test" --cv "C:/Users/Dev/Desktop/Job Agents/job-agent/cv/cv_variant_a.md" --coverletter "" --company "EY" --title "Senior Project Manager - Business Consulting"
+[2026-05-21T12:00:53.030Z] RUN: node playwright/scrape_naukri.js
+[2026-05-21T12:00:53.044Z] RUN: node playwright/scrape_indeed.js
+[2026-05-28T10:55:26.305Z] Helper service listening on http://127.0.0.1:9999
+[2026-05-28T11:01:52.510Z] RUN: node playwright/scrape_naukri.js
+[2026-05-28T11:05:27.365Z] RUN: node playwright/scrape_naukri.js
+[2026-05-28T12:00:21.139Z] RUN: node playwright/scrape_naukri.js
+[2026-05-28T12:00:41.057Z] RUN: node playwright/scrape_indeed.js
+[2026-05-28T16:00:04.957Z] RUN: node playwright/scrape_tier1.js
+[2026-05-28T16:00:21.818Z] RUN: node playwright/scrape_naukri.js
+[2026-05-28T16:00:41.846Z] RUN: node playwright/scrape_indeed.js
+[2026-06-07T13:49:40.215Z] Helper service listening on http://127.0.0.1:9999
+[2026-06-07T13:49:42.471Z] UNCAUGHT: listen EADDRINUSE: address already in use 127.0.0.1:9999
+Error: listen EADDRINUSE: address already in use 127.0.0.1:9999
+    at Server.setupListenHandle [as _listen2] (node:net:1948:16)
+    at listenInCluster (node:net:2005:12)
+    at node:net:2214:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+[2026-06-07T16:00:02.201Z] RUN: node playwright/scrape_wttj.js
+[2026-06-07T16:00:10.062Z] RUN: node playwright/scrape_indeed.js
+[2026-06-07T16:00:31.073Z] RUN: node playwright/scrape_tier1.js
+[2026-06-07T16:00:35.047Z] RUN: node playwright/scrape_naukri.js
+[2026-06-07T20:00:11.278Z] RUN: node playwright/scrape_indeed.js
+[2026-06-07T20:00:36.223Z] RUN: node playwright/scrape_naukri.js
+[2026-06-07T22:00:03.234Z] RUN: node playwright/scrape_wttj.js
+[2026-06-07T22:00:32.197Z] RUN: node playwright/scrape_tier1.js
+[2026-06-08T00:00:10.067Z] RUN: node playwright/scrape_indeed.js
+[2026-06-08T00:00:35.048Z] RUN: node playwright/scrape_naukri.js
+[2026-06-08T08:48:02.955Z] RUN: node playwright/scrape_naukri.js

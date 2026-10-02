@@ -1,0 +1,29 @@
+# Secrets & personal data
+.env
+profile.json
+*_auth.json
+cv/*.pdf
+cv/*.docx
+cv/*.doc
+config/google-service-account.json
+
+# Generated
+output/
+node_modules/
+setup/logs/
+setup/cache/
+setup/applied_jobs.json
+setup/applied_jobs.json.tmp
+setup/sheets_outbox.json
+setup/sheets_outbox.json.tmp
+playwright/.indeed-user-data/
+setup/inflight.json
+setup/discovery_status.json
+setup/schedule_state.json
+setup/hitl_status.json
+setup/profiles/
+config/gmail_oauth_client.json
+config/gmail_token.json
+setup/mail_seen.json
+setup/checkpoints/
+setup/recovery/

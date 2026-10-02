@@ -1,0 +1,201 @@
+[
+  {
+    "updatedAt": "2026-05-07T09:40:27.000Z",
+    "createdAt": "2026-05-05T11:49:15.771Z",
+    "id": "wttj-scraper-workflow",
+    "name": "Scraper — Welcome to the Jungle",
+    "description": null,
+    "active": false,
+    "isArchived": false,
+    "nodes": [
+      {
+        "parameters": {
+          "functionCode": "const searches = [{\"query\": \"AI Operations\", \"aroundQuery\": \"Europe\"}, {\"query\": \"AI Project Manager\", \"aroundQuery\": \"Europe\"}, {\"query\": \"AI Customer Success\", \"aroundQuery\": \"Europe\"}, {\"query\": \"AI Strategy\", \"aroundQuery\": \"Europe\"}, {\"query\": \"Customer Success\", \"aroundQuery\": \"Europe\"}, {\"query\": \"Operations Manager\", \"aroundQuery\": \"Netherlands\"}];\nreturn searches.map(s => ({\n  json: {\n    url: `https://api.welcometothejungle.com/api/v1/jobs?query=${encodeURIComponent(s.query)}&around_query=${encodeURIComponent(s.aroundQuery)}&contract_type=full_time&page=1&per_page=20`,\n    source_platform: 'wttj'\n  }\n}));"
+        },
+        "id": "fn-build-wttj-urls",
+        "name": "Build Search URLs",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [
+          460,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "={{$json.url}}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "User-Agent",
+                "value": "Mozilla/5.0"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              },
+              {
+                "name": "Accept-Language",
+                "value": "en-US,en;q=0.9"
+              }
+            ]
+          },
+          "options": {
+            "timeout": 15000,
+            "batching": {
+              "batch": {
+                "batchSize": 1,
+                "batchInterval": 5000
+              }
+            },
+            "retry": {
+              "enabled": true,
+              "maxTries": 3,
+              "waitBetweenTries": 10000
+            }
+          }
+        },
+        "id": "http-fetch-wttj",
+        "name": "Fetch WTTJ Results",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [
+          680,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "functionCode": "const response = $input.first().json;\nconst jobs = response.jobs || response.data || response.results || [];\n\nreturn jobs.map(job => ({\n  json: {\n    job_id: job.slug || job.id || '',\n    job_title: job.name || job.title || '',\n    company: (job.organization && job.organization.name) || job.company || '',\n    location: (job.office && job.office.city) || job.location || 'Europe',\n    job_url: job.url || `https://www.welcometothejungle.com/jobs/${job.slug}`,\n    description: (job.description || job.profile || '').replace(/<[^>]+>/g, ' ').trim().substring(0, 3000),\n    source_platform: 'wttj'\n  }\n}));"
+        },
+        "id": "fn-parse-wttj",
+        "name": "Parse WTTJ Results",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [
+          900,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "functionCode": "const fs = require('fs');\nconst path = require('path');\n\nconst cacheDir = 'C:/Users/Dev/Desktop/Job Agents/job-agent/setup/cache';\nif (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });\n\n// Per-platform cache file\nconst item = $input.first().json;\nconst platform = item.source_platform || 'unknown';\nconst cacheFile = path.join(cacheDir, `seen_${platform.replace(/[^a-z0-9_]/gi, '_')}.json`);\n\nlet seen = [];\ntry { seen = JSON.parse(fs.readFileSync(cacheFile, 'utf-8')); } catch (e) {}\n\nconst url = item.job_url || item.job_id || '';\nif (!url) return [];\nif (seen.includes(url)) return []; // Already seen\n\nseen.push(url);\nif (seen.length > 5000) seen = seen.slice(-3000);\nfs.writeFileSync(cacheFile, JSON.stringify(seen));\n\nreturn [{ json: item }];"
+        },
+        "id": "fn-dedup-wttj",
+        "name": "Deduplicate",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [
+          1120,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=http://127.0.0.1:5678/webhook/score-job",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{JSON.stringify($json)}}",
+          "options": {}
+        },
+        "id": "http-trigger-scorer-wttj",
+        "name": "Trigger Fit Scorer",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [
+          1340,
+          300
+        ]
+      }
+    ],
+    "connections": {
+      "Build Search URLs": {
+        "main": [
+          [
+            {
+              "node": "Fetch WTTJ Results",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch WTTJ Results": {
+        "main": [
+          [
+            {
+              "node": "Parse WTTJ Results",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse WTTJ Results": {
+        "main": [
+          [
+            {
+              "node": "Deduplicate",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Deduplicate": {
+        "main": [
+          [
+            {
+              "node": "Trigger Fit Scorer",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": {
+      "node:Schedule: Every 6h": {
+        "recurrenceRules": [
+          6
+        ]
+      }
+    },
+    "meta": null,
+    "pinData": null,
+    "versionId": "b5a60de5-4669-43a2-8856-ccc5ff9d7811",
+    "activeVersionId": "b5a60de5-4669-43a2-8856-ccc5ff9d7811",
+    "versionCounter": 39,
+    "triggerCount": 1,
+    "tags": [],
+    "shared": [
+      {
+        "updatedAt": "2026-05-05T11:49:15.775Z",
+        "createdAt": "2026-05-05T11:49:15.775Z",
+        "role": "workflow:owner",
+        "workflowId": "wttj-scraper-workflow",
+        "projectId": "XxRfzNcZZPKbVFJ4",
+        "project": {
+          "updatedAt": "2025-09-11T18:16:29.262Z",
+          "createdAt": "2025-09-11T18:15:47.340Z",
+          "id": "XxRfzNcZZPKbVFJ4",
+          "name": "Dev Rajput <rajputdev77@gmail.com>",
+          "type": "personal",
+          "icon": null,
+          "description": null,
+          "creatorId": "10df8a02-98c1-4628-8f50-17fb05a8dd57"
+        }
+      }
+    ],
+    "versionMetadata": {
+      "name": null,
+      "description": null
+    }
+  }
+]

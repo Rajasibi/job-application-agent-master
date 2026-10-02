@@ -1,0 +1,109 @@
+{
+  "name": "App Logger — Google Sheets",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "log-application",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-log",
+      "name": "Webhook: /log-application",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const data = $input.first().json.body || $input.first().json;\n\nconst row = {\n  Timestamp: new Date().toISOString(),\n  Company: data.company || '',\n  'Job Title': data.job_title || '',\n  Platform: data.source_platform || data.platform || '',\n  Location: data.location || '',\n  'Fit Score': data.score || data.fit_score || '',\n  'CV Variant': data.cv_variant || data.cvVariant || '',\n  'Cover Letter': data.coverLetterSent ? 'Yes' : 'No',\n  Status: data.status || 'APPLIED',\n  'Job URL': data.job_url || '',\n  Notes: data.notes || data.error_message || ''\n};\n\nreturn [{ json: row }];"
+      },
+      "id": "fn-format-row",
+      "name": "Format Row",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{$env.GOOGLE_SHEETS_ID}}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Applications",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{$json.Timestamp}}",
+            "Company": "={{$json.Company}}",
+            "Job Title": "={{$json['Job Title']}}",
+            "Platform": "={{$json.Platform}}",
+            "Location": "={{$json.Location}}",
+            "Fit Score": "={{$json['Fit Score']}}",
+            "CV Variant": "={{$json['CV Variant']}}",
+            "Cover Letter": "={{$json['Cover Letter']}}",
+            "Status": "={{$json.Status}}",
+            "Job URL": "={{$json['Job URL']}}",
+            "Notes": "={{$json.Notes}}"
+          }
+        },
+        "options": {}
+      },
+      "id": "gsheets-append",
+      "name": "Google Sheets — Append Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        680,
+        300
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-cred",
+          "name": "Google Sheets (Service Account)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook: /log-application": {
+      "main": [
+        [
+          {
+            "node": "Format Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Row": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets — Append Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "app-logger-workflow"
+}

@@ -1,0 +1,28 @@
+{
+  "firstName": "",
+  "lastName": "",
+  "fullName": "",
+  "email": "",
+  "phone": "",
+  "location": "",
+  "city": "",
+  "country": "",
+  "linkedin": "",
+  "portfolio": "",
+  "currentCompany": "",
+  "currentTitle": "",
+  "yearsExperience": "",
+  "education": "",
+  "university": "",
+  "graduationYear": "",
+  "currentSalary": "",
+  "expectedSalary": "",
+  "noticePeriod": "",
+  "authorizedToWork": "Yes",
+  "requiresSponsorship": "",
+  "willingToRelocate": "",
+  "resumePath": "cv/YOUR_CV.pdf",
+  "answers": {
+    "_example: exact question text as shown on the form": "your answer"
+  }
+}

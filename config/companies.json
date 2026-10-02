@@ -1,0 +1,23 @@
+{
+  "_note": "Public ATS job boards to read (greenhouse | lever | ashby | smartrecruiters | workable). Add { \"name\", \"ats\", \"id\" }; set \"enabled\": false to pause one.",
+  "companies": [
+    {
+      "name": "Quantumloop Ai",
+      "ats": "workable",
+      "id": "quantumloopai",
+      "added_from": "your application log"
+    },
+    {
+      "name": "Netomi",
+      "ats": "lever",
+      "id": "netomi",
+      "added_from": "your application log"
+    },
+    {
+      "name": "Quantumloop Ai",
+      "ats": "workable",
+      "id": "j",
+      "added_from": "your application log"
+    }
+  ]
+}

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Job Agent — Google Sheet Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0d1117; color: #c9d1d9; padding: 24px; min-height: 100vh;
+  }
+  h1 { font-size: 28px; margin-bottom: 4px; color: #58a6ff; }
+  .sub { color: #8b949e; margin-bottom: 24px; font-size: 14px; }
+  .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 32px; }
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; }
+  .card .label { font-size: 12px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; }
+  .card .value { font-size: 32px; font-weight: 600; margin-top: 4px; }
+  .applied { color: #3fb950; }
+  .rejected { color: #8b949e; }
+  .pending { color: #d29922; }
+  .failed { color: #f85149; }
+  .filters { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .filters input, .filters select {
+    background: #0d1117; border: 1px solid #30363d; color: #c9d1d9;
+    padding: 8px 12px; border-radius: 6px; font-size: 14px;
+  }
+  table { width: 100%; border-collapse: collapse; background: #161b22; border-radius: 8px; overflow: hidden; }
+  th { background: #21262d; padding: 12px; text-align: left; font-size: 12px; font-weight: 600;
+       text-transform: uppercase; color: #8b949e; border-bottom: 1px solid #30363d; }
+  td { padding: 12px; border-bottom: 1px solid #21262d; font-size: 14px; }
+  tr:hover { background: #1c2128; }
+  .score { display: inline-block; padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 13px; }
+  .score-high { background: #1f6f3f; color: #c8e6c9; }
+  .score-mid { background: #7d4f0a; color: #ffe082; }
+  .score-low { background: #3d3d3d; color: #c9d1d9; }
+  .status { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+  .status-APPLIED { background: #1f6f3f; color: #c8e6c9; }
+  .status-AWAITING_MANUAL_SUBMIT { background: #7d4f0a; color: #ffe082; }
+  .status-REJECTED { background: #3d3d3d; color: #8b949e; }
+  .status-FAILED { background: #6f1f1f; color: #f8c8c4; }
+  a { color: #58a6ff; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .refresh { background: #238636; color: white; border: 0; padding: 8px 16px;
+             border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; }
+  .refresh:hover { background: #2ea043; }
+  .config { background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+            padding: 16px; margin-bottom: 24px; font-size: 13px; color: #8b949e; }
+  .config code { background: #0d1117; padding: 2px 6px; border-radius: 4px; color: #58a6ff; }
+  .empty { text-align: center; padding: 48px; color: #8b949e; }
+  .empty h3 { color: #c9d1d9; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<h1>🤖 Job Agent — Live Dashboard</h1>
+<p class="sub">All applications, scores, and statuses. Reads directly from your Google Sheet.</p>
+
+<div class="config" id="config">
+  <strong>Setup once:</strong> Open this file (<code>dashboard/index.html</code>), paste your Google Sheet ID below, and make the sheet "Anyone with the link can view".
+  <br><br>
+  Sheet ID: <input type="text" id="sheetId" placeholder="1AbCdEf..." style="width: 400px; padding: 4px 8px; background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; border-radius: 4px;" />
+  <button class="refresh" onclick="saveConfig()" style="margin-left: 8px;">Save & Load</button>
+</div>
+
+<div class="stats" id="stats">
+  <div class="card"><div class="label">Total Scored</div><div class="value" id="stat-total">—</div></div>
+  <div class="card"><div class="label">Applied</div><div class="value applied" id="stat-applied">—</div></div>
+  <div class="card"><div class="label">Awaiting Submit</div><div class="value pending" id="stat-pending">—</div></div>
+  <div class="card"><div class="label">Rejected by AI</div><div class="value rejected" id="stat-rejected">—</div></div>
+  <div class="card"><div class="label">Failed</div><div class="value failed" id="stat-failed">—</div></div>
+</div>
+
+<div class="toolbar">
+  <div class="filters">
+    <input type="text" id="search" placeholder="Search company or title..." oninput="render()" />
+    <select id="filterStatus" onchange="render()">
+      <option value="">All statuses</option>
+      <option value="APPLIED">Applied</option>
+      <option value="AWAITING_MANUAL_SUBMIT">Awaiting Submit</option>
+      <option value="REJECTED">Rejected</option>
+      <option value="FAILED">Failed</option>
+    </select>
+    <select id="filterPlatform" onchange="render()">
+      <option value="">All platforms</option>
+    </select>
+  </div>
+  <button class="refresh" onclick="loadData()">↻ Refresh</button>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>When</th>
+      <th>Company</th>
+      <th>Role</th>
+      <th>Platform</th>
+      <th>Score</th>
+      <th>CV</th>
+      <th>Cover Letter</th>
+      <th>Status</th>
+      <th>Link</th>
+    </tr>
+  </thead>
+  <tbody id="rows"></tbody>
+</table>
+
+<script>
+let allRows = [];
+
+function saveConfig() {
+  const id = document.getElementById('sheetId').value.trim();
+  if (!id) return alert('Paste your Google Sheet ID first');
+  localStorage.setItem('jobAgentSheetId', id);
+  document.getElementById('config').style.display = 'none';
+  loadData();
+}
+
+async function loadData() {
+  const id = localStorage.getItem('jobAgentSheetId');
+  if (!id) {
+    document.getElementById('config').style.display = 'block';
+    return;
+  }
+  document.getElementById('config').style.display = 'none';
+
+  // Use the published-CSV URL (sheet must be: File > Share > "Anyone with link can view")
+  const url = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=Applications`;
+
+  try {
+    const res = await fetch(url);
+    const text = await res.text();
+    allRows = parseCSV(text);
+    populatePlatformFilter();
+    render();
+    updateStats();
+  } catch (e) {
+    document.getElementById('rows').innerHTML = `<tr><td colspan="9" class="empty">
+      <h3>Could not load</h3>
+      <p>Make sure the sheet is shared as "Anyone with the link can view".</p>
+      <p style="margin-top: 8px; font-size: 12px;">${esc(e.message)}</p>
+    </td></tr>`;
+  }
+}
+
+// RFC 4180 parser: quoted fields may contain commas, quotes ("") and line breaks.
+function parseCSV(text) {
+  const records = []; let row = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"' && text[i + 1] === '"') { cur += '"'; i++; }
+      else if (c === '"') inQ = false;
+      else cur += c;
+    } else if (c === '"') inQ = true;
+    else if (c === ',') { row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(cur); records.push(row); row = []; cur = '';
+    } else cur += c;
+  }
+  if (cur || row.length) { row.push(cur); records.push(row); }
+  if (records.length < 2) return [];
+  const headers = records[0];
+  return records.slice(1).filter(r => r.some(Boolean)).map(fields => {
+    const row = {};
+    headers.forEach((h, i) => row[h] = fields[i] || '');
+    return row;
+  });
+}
+
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function populatePlatformFilter() {
+  const platforms = [...new Set(allRows.map(r => r.Platform).filter(Boolean))].sort();
+  const sel = document.getElementById('filterPlatform');
+  while (sel.options.length > 1) sel.remove(1);
+  platforms.forEach(p => sel.add(new Option(p, p)));
+}
+
+function render() {
+  const search = document.getElementById('search').value.toLowerCase();
+  const fStatus = document.getElementById('filterStatus').value;
+  const fPlatform = document.getElementById('filterPlatform').value;
+
+  const filtered = allRows.filter(r => {
+    if (fStatus && r.Status !== fStatus) return false;
+    if (fPlatform && r.Platform !== fPlatform) return false;
+    if (search && !(r.Company + r['Job Title']).toLowerCase().includes(search)) return false;
+    return true;
+  }).reverse();
+
+  const tbody = document.getElementById('rows');
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" class="empty"><h3>No applications yet</h3><p>The agent will populate this once jobs are scored.</p></td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(r => {
+    const score = parseInt(r['Fit Score']) || 0;
+    const scoreCls = score >= 85 ? 'score-high' : score >= 70 ? 'score-mid' : 'score-low';
+    const ts = r.Timestamp ? new Date(r.Timestamp).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+    return `<tr>
+      <td>${ts}</td>
+      <td><strong>${esc(r.Company)}</strong><br><small style="color:#8b949e">${esc(r.Location)}</small></td>
+      <td>${esc(r['Job Title'])}<br><small style="color:#8b949e">${esc(r.Notes)}</small></td>
+      <td>${esc(r.Platform)}</td>
+      <td><span class="score ${scoreCls}">${esc(r['Fit Score'] || '—')}</span></td>
+      <td>${esc(r['CV Variant'] || '—')}</td>
+      <td>${esc(r['Cover Letter'] || '—')}</td>
+      <td><span class="status status-${esc(r.Status || 'UNKNOWN')}">${esc(r.Status || '—')}</span></td>
+      <td>${/^https?:\/\//i.test(r['Job URL']) ? `<a href="${esc(r['Job URL'])}" target="_blank" rel="noopener">View →</a>` : ''}</td>
+    </tr>`;
+  }).join('');
+}
+
+function updateStats() {
+  const total = allRows.length;
+  const applied = allRows.filter(r => r.Status === 'APPLIED').length;
+  const pending = allRows.filter(r => r.Status === 'AWAITING_MANUAL_SUBMIT').length;
+  const rejected = allRows.filter(r => r.Status === 'REJECTED').length;
+  const failed = allRows.filter(r => r.Status === 'FAILED').length;
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-applied').textContent = applied;
+  document.getElementById('stat-pending').textContent = pending;
+  document.getElementById('stat-rejected').textContent = rejected;
+  document.getElementById('stat-failed').textContent = failed;
+}
+
+// Auto-refresh every 60s
+setInterval(loadData, 60000);
+
+// Init
+const savedId = localStorage.getItem('jobAgentSheetId');
+if (savedId) {
+  document.getElementById('sheetId').value = savedId;
+  loadData();
+}
+</script>
+
+</body>
+</html>

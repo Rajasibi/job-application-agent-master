@@ -1,0 +1,154 @@
+{
+  "id": "india-agent-workflow",
+  "name": "Executor — India Agent (LinkedIn / Naukri / Indeed)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "apply-india",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "23f2fb8b-e32e-47ba-aab7-0c6dfc7c091a",
+      "webhookId": "6fa73e20-fd9d-4216-901c-a4b67cbd9367",
+      "name": "Webhook: /apply-india",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9999/apply",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ job: $json.body }) }}",
+        "options": {
+          "timeout": 900000
+        }
+      },
+      "id": "d5c57f87-0e14-4b7d-ab48-4440f330d82d",
+      "name": "Prepare Application (review mode)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "3d198088-f7fa-465a-a27e-eab1ebe15222",
+              "leftValue": "={{ $json.job.skipped }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a202e9f3-d175-41b3-bbda-c4f25c6b52fd",
+      "name": "Skipped?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "a509c7df-3bc2-4cca-943d-89226313a7cb",
+      "name": "Already Handled / Daily Cap",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5678/webhook/log-application",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.job) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "87139a68-05ce-43d4-a4f7-86c953bdd5da",
+      "name": "Log Result",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: /apply-india": {
+      "main": [
+        [
+          {
+            "node": "Prepare Application (review mode)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Application (review mode)": {
+      "main": [
+        [
+          {
+            "node": "Skipped?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skipped?": {
+      "main": [
+        [
+          {
+            "node": "Already Handled / Daily Cap",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

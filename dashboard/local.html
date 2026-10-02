@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Job Agent — Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9; padding: 24px; min-height: 100vh; }
+  h1 { font-size: 26px; color: #58a6ff; margin-bottom: 4px; }
+  .sub { color: #8b949e; margin-bottom: 20px; font-size: 14px; }
+  .bar { display: flex; gap: 14px; padding: 12px; background: #161b22; border: 1px solid #30363d; border-radius: 8px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+  .tabs { display: flex; border-bottom: 1px solid #30363d; margin-bottom: 20px; }
+  .tab { padding: 12px 22px; cursor: pointer; color: #8b949e; border-bottom: 2px solid transparent; }
+  .tab.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+  .badge { display: inline-block; background: #d29922; color: #0d1117; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-left: 6px; font-weight: 600; }
+  .panel { display: none; } .panel.active { display: block; }
+  .stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 20px; }
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 14px; }
+  .card .label { font-size: 12px; color: #8b949e; text-transform: uppercase; }
+  .card .value { font-size: 30px; font-weight: 600; margin-top: 4px; }
+  .c-applied { color: #3fb950; } .c-pending { color: #d29922; } .c-failed { color: #f85149; } .c-rejected { color: #8b949e; }
+  table { width: 100%; border-collapse: collapse; background: #161b22; border-radius: 8px; overflow: hidden; }
+  th { background: #21262d; padding: 10px; text-align: left; font-size: 12px; text-transform: uppercase; color: #8b949e; }
+  td { padding: 10px; border-bottom: 1px solid #21262d; font-size: 14px; vertical-align: top; }
+  .status { padding: 3px 9px; border-radius: 12px; font-size: 12px; white-space: nowrap; }
+  .s-APPLIED { background: #1f6f3f; color: #c8e6c9; }
+  .s-NEEDS_REVIEW { background: #7d4f0a; color: #ffe082; }
+  .s-FAILED { background: #6f1f1f; color: #f8c8c4; }
+  .s-REJECTED { background: #3d3d3d; color: #c9d1d9; }
+  .s-SECURITY_CHALLENGE { background: #8a2be2; color: #f0e1ff; }
+  .s-DISCOVERED, .s-SCORED, .s-CV_READY, .s-APPLICATION_STARTED { background: #1c4ad9; color: #cfe1ff; }
+  .hint { color: #d29922; font-size: 12px; margin-top: 4px; }
+  .needs { color: #9ecbff; font-size: 12px; margin-top: 4px; }
+  a { color: #58a6ff; text-decoration: none; }
+  .btn { padding: 6px 12px; border: 0; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; margin: 2px; }
+  .btn-go { background: #238636; color: #fff; } .btn-2 { background: #30363d; color: #c9d1d9; } .btn-warn { background: #d29922; color: #0d1117; }
+  .toolbar { display: flex; gap: 10px; margin-bottom: 14px; }
+  input, select { background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; padding: 7px 10px; border-radius: 6px; }
+  .notes { color: #8b949e; font-size: 12px; max-width: 420px; }
+  .empty { text-align: center; padding: 40px; color: #8b949e; }
+  .ts { color: #8b949e; font-size: 12px; }
+  .ok { color: #3fb950; } .down { color: #f85149; }
+</style>
+</head>
+<body>
+
+<h1>Job Agent — Dashboard</h1>
+<p class="sub"><span id="policy-line">The agent finds, scores and prepares applications.</span> It never gets around CAPTCHA or bot checks: when one appears in its window, it waits for you to solve it. Auto-refreshes every 30s.</p>
+
+<div id="hitl-banner" style="display:none;background:#3d2e00;border:1px solid #d29922;color:#f0c000;padding:10px 14px;border-radius:6px;margin-bottom:12px;font-weight:600"></div>
+<div id="parked-banner" style="display:none;background:#2a1e3d;border:1px solid #8a2be2;color:#e0c8ff;padding:10px 14px;border-radius:6px;margin-bottom:12px">
+  <strong id="parked-text"></strong>
+  <button class="btn btn-go" style="margin-left:10px" onclick="resolveParked()">▶ Resolve now (I'm at the laptop)</button>
+</div>
+
+<div class="bar">
+  <strong>System:</strong>
+  <span id="h-n8n">n8n …</span><span id="h-helper">Helper …</span><span id="h-ollama">Ollama …</span>
+  <span style="margin-left:auto"></span>
+  <select id="scrapeTarget">
+    <option value="all">All sites (one after another)</option>
+    <option>naukri</option><option>foundit</option><option>indeed</option>
+  </select>
+  <button class="btn btn-go" onclick="runScrape()">▶ Visible search now</button>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="review" onclick="switchTab('review')">Needs you <span class="badge" id="pending-badge">0</span></div>
+  <div class="tab" data-tab="all" onclick="switchTab('all')">All applications</div>
+  <div class="tab" data-tab="find" onclick="switchTab('find'); loadDiscovery()">Find jobs</div>
+</div>
+
+<div class="panel" id="panel-find">
+  <div class="card" style="margin-bottom:16px">
+    <strong>Check-free sources (no browser, no Cloudflare)</strong>
+    <p class="notes" style="max-width:none;margin:6px 0 10px">Jobs from your Naukri/foundit/Indeed <em>job-alert emails</em> and from employers' <em>public ATS job boards</em> (Greenhouse, Lever, Ashby, SmartRecruiters, Workable). These load no job-site page, so nothing can block them. They run automatically; the buttons run them now.</p>
+    <button class="btn btn-go" onclick="intake('email')">✉ Read job-alert emails</button>
+    <button class="btn btn-go" onclick="intake('boards')">🏢 Read company job boards</button>
+    <div class="notes" id="intake-line" style="max-width:none;margin-top:6px"></div>
+    <div id="intake-result" class="hint" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <strong>Visible search</strong>
+    <p class="notes" style="max-width:none;margin:6px 0 10px">Opens a real browser window on this computer with your saved login and reads the job results slowly (5 s between pages).
+      If a CAPTCHA, human check or login appears, the window waits up to 5 minutes for you to solve it, then continues. "Access Denied" stops the run. It never tries to get around a check.</p>
+    <button class="btn btn-go" onclick="runVisible('naukri')">🔍 Visible search: Naukri</button>
+    <button class="btn btn-go" onclick="runVisible('foundit')">🔍 Visible search: foundit</button>
+    <button class="btn btn-go" onclick="runVisible('indeed')">🔍 Visible search: Indeed</button>
+    <div class="notes" id="schedule-line" style="max-width:none;margin-top:8px"></div>
+    <div id="visible-result" class="hint" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <strong>Paste a job</strong>
+    <p class="notes" style="max-width:none;margin:6px 0 10px">Paste a Naukri, foundit, Indeed or company careers link. It goes through the normal pipeline:
+      duplicate check, fit score (70+), tailored CV and cover letter, then auto-apply (Naukri / foundit, 80+) or preparation for your review. For Indeed, also paste the job description.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:900px">
+      <input id="pj-url" placeholder="Job link (https://…) *" style="grid-column:1 / span 2">
+      <input id="pj-title" placeholder="Job title (optional)">
+      <input id="pj-company" placeholder="Company (optional)">
+      <input id="pj-location" placeholder="Location (optional)" style="grid-column:1 / span 2">
+      <textarea id="pj-desc" placeholder="Job description (optional; required for Indeed or if the site blocks reading)" rows="6" style="grid-column:1 / span 2;background:#0d1117;border:1px solid #30363d;color:#c9d1d9;padding:8px;border-radius:6px"></textarea>
+    </div>
+    <button class="btn btn-go" style="margin-top:8px" onclick="pasteJob()">➕ Send to the agent</button>
+    <div id="paste-result" class="hint" style="margin-top:8px"></div>
+  </div>
+
+  <table>
+    <thead><tr><th>Source</th><th>Last run</th><th>Mode</th><th>Found</th><th>Sent to pipeline</th><th>Blocked / notes</th></tr></thead>
+    <tbody id="discovery-rows"></tbody>
+  </table>
+  <p class="notes" id="feeder-line" style="max-width:none;margin-top:8px"></p>
+</div>
+
+<div class="panel active" id="panel-review">
+  <div class="toolbar">
+    <button class="btn btn-go" onclick="openNext(5)">↗ Open next 5 in my browser</button>
+    <button class="btn btn-2" onclick="recheck('applied')">✔ Check which ones I applied to</button>
+    <button class="btn btn-2" onclick="recheck('all')">↻ Re-check all open jobs</button>
+    <button class="btn btn-2" id="auto-pending-btn" onclick="autoApplyWaiting()" style="display:none"></button>
+    <span class="notes" id="review-note" style="margin-left:8px">Apply in your own browser; the agent confirms "Applied" from Naukri / foundit itself (after each scheduled search, or with the check button). Same status + next action are in your Google Sheet.</span>
+    <div class="hint" id="recheck-line" style="margin-top:6px"></div>
+  </div>
+  <table>
+    <thead><tr><th>Prepared</th><th>Company / Role</th><th>Platform</th><th>Score</th><th>State / agent notes</th><th>Files</th><th>Action</th></tr></thead>
+    <tbody id="review-rows"></tbody>
+  </table>
+</div>
+
+<div class="panel" id="panel-all">
+  <div class="stats">
+    <div class="card"><div class="label">Applied</div><div class="value c-applied" id="st-APPLIED">—</div><div class="notes" id="st-AUTO"></div></div>
+    <div class="card"><div class="label">In progress</div><div class="value" id="st-PREPARED">—</div></div>
+    <div class="card"><div class="label">Ready: click Apply</div><div class="value c-pending" id="st-AWAITING_MANUAL_SUBMIT">—</div></div>
+    <div class="card"><div class="label">Needs you (form / question)</div><div class="value" style="color:#9ecbff" id="st-NEEDS_HUMAN_INPUT">—</div></div>
+    <div class="card"><div class="label">Security check</div><div class="value" style="color:#d2a8ff" id="st-SECURITY_CHALLENGE">—</div></div>
+    <div class="card"><div class="label">Failed</div><div class="value c-failed" id="st-FAILED">—</div></div>
+  </div>
+  <div class="toolbar">
+    <input id="search" placeholder="Search company or title…" oninput="renderAll()">
+    <select id="fStatus" onchange="renderAll()"><option value="">All statuses</option></select>
+    <select id="fPlatform" onchange="renderAll()"><option value="">All platforms</option></select>
+    <button class="btn btn-warn" style="margin-left:auto" onclick="retryLoginFailures()">↻ Retry all login failures</button>
+  </div>
+  <table>
+    <thead><tr><th>Updated</th><th>Company</th><th>Role</th><th>Platform</th><th>Score</th><th>Status</th><th>Notes</th><th>Link</th></tr></thead>
+    <tbody id="all-rows"></tbody>
+  </table>
+</div>
+
+<script>
+const HELPER = 'http://127.0.0.1:9999';
+const N8N = 'http://127.0.0.1:5678';
+let apps = [];
+
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const safeUrl = u => /^https?:\/\//i.test(String(u || '')) ? esc(u) : '#';
+const when = t => t ? new Date(t).toLocaleString() : '';
+const shot = p => p ? `/output/${encodeURIComponent(String(p).split(/[\\/]/).pop())}` : '';
+
+// Mirrors playwright/application_log.js STATUSES (pipeline stages; single status system).
+const STATUSES = ['DISCOVERED', 'SCORED', 'CV_READY', 'APPLICATION_STARTED', 'NEEDS_REVIEW', 'SECURITY_CHALLENGE', 'APPLIED', 'FAILED', 'REJECTED'];
+const REVIEW = ['NEEDS_REVIEW', 'SECURITY_CHALLENGE'];
+const IN_PROGRESS = ['DISCOVERED', 'SCORED', 'CV_READY', 'APPLICATION_STARTED'];
+const FINAL = ['APPLIED', 'REJECTED'];
+const LABEL = {
+  DISCOVERED: 'Discovered', SCORED: 'Scored', CV_READY: 'CV ready', APPLICATION_STARTED: 'Checking…',
+  NEEDS_REVIEW: 'Needs you', SECURITY_CHALLENGE: 'Security check', APPLIED: 'Applied', FAILED: 'Failed', REJECTED: 'Rejected'
+};
+const HINT = {
+  NEEDS_REVIEW: 'Do the step shown above. For "click Apply" jobs you don\'t need to come back here: the agent sees Naukri\'s Applied state on its next check.',
+  SECURITY_CHALLENGE: 'The site showed a check or blocked the agent. Apply in your own browser, or press Re-check all while at the laptop to solve it in the agent\'s window.'
+};
+const badge = s => `<span class="status s-${esc(s)}">${esc(LABEL[s] || s)}</span>`;
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === `panel-${name}`));
+}
+
+async function load() {
+  try {
+    const r = await fetch(`${HELPER}/applications`);
+    apps = (await r.json()).applications || [];
+  } catch (_) { apps = []; }
+  apps.sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)));
+  const platforms = [...new Set(apps.map(a => a.platform).filter(Boolean))].sort();
+  const sel = document.getElementById('fPlatform');
+  const keep = sel.value;
+  sel.innerHTML = '<option value="">All platforms</option>' + platforms.map(p => `<option>${esc(p)}</option>`).join('');
+  sel.value = keep;
+  const fsel = document.getElementById('fStatus');
+  const fkeep = fsel.value;
+  fsel.innerHTML = '<option value="">All statuses</option>' + STATUSES.map(s => `<option value="${s}">${esc(LABEL[s])}</option>`).join('');
+  fsel.value = fkeep;
+  renderReview();
+  renderAll();
+}
+
+function renderReview() {
+  // Grouped by what you need to do: "click Apply" first, then forms/questions, then security checks.
+  const group = a => a.status === 'SECURITY_CHALLENGE' ? 2 : a.detail === 'READY_ONE_CLICK' ? 0 : 1;
+  const pending = apps.filter(a => REVIEW.includes(a.status))
+    .sort((a, b) => group(a) - group(b) || (Number(b.fit_score) || 0) - (Number(a.fit_score) || 0));
+  document.getElementById('pending-badge').textContent = pending.length;
+  const body = document.getElementById('review-rows');
+  if (!pending.length) { body.innerHTML = '<tr><td colspan="7" class="empty">Nothing needs you right now. New matches are processed automatically; exceptions appear here and in your Google Sheet.</td></tr>'; return; }
+  body.innerHTML = pending.map(a => `
+    <tr>
+      <td class="ts">${esc(when(a.updated_at))}</td>
+      <td><strong>${esc(a.company)}</strong><br>${esc(a.job_title)}<br><a href="${safeUrl(a.job_url)}" target="_blank" rel="noopener">job posting ↗</a></td>
+      <td>${esc(a.platform)}</td>
+      <td>${esc(a.fit_score)}</td>
+      <td class="notes">${badge(a.status)} <strong>${esc(a.next_action || '')}</strong><br>${esc(a.notes)}
+        ${a.needs_input ? `<div class="needs">Needs your answer: ${esc(a.needs_input)}</div>` : ''}
+        <div class="hint">${esc(HINT[a.status] || '')}</div></td>
+      <td class="notes">${a.screenshot ? `<a href="${shot(a.screenshot)}" target="_blank">screenshot</a><br>` : ''}CV ${esc(a.cv_variant)}${a.cover_letter === 'Yes' ? ' + cover letter' : ''}</td>
+      <td>
+        <button class="btn btn-go" onclick="review('${esc(a.id)}')">Review &amp; submit</button><br>
+        <button class="btn btn-2" onclick="mark('${esc(a.id)}','APPLIED')">Mark submitted</button>
+        <button class="btn btn-2" onclick="mark('${esc(a.id)}','REJECTED')">Skip</button>
+        <br><button class="btn btn-2" onclick="retry('${esc(a.id)}')">Re-check</button>
+      </td>
+    </tr>`).join('');
+}
+
+function renderAll() {
+  const counts = Object.fromEntries(STATUSES.map(s => [s, 0]));
+  apps.forEach(a => { if (a.status in counts) counts[a.status]++; });
+  document.getElementById('st-PREPARED').textContent = IN_PROGRESS.reduce((n, s) => n + counts[s], 0);
+  document.getElementById('st-AWAITING_MANUAL_SUBMIT').textContent = apps.filter(a => a.status === 'NEEDS_REVIEW' && a.detail === 'READY_ONE_CLICK').length;
+  document.getElementById('st-NEEDS_HUMAN_INPUT').textContent = apps.filter(a => a.status === 'NEEDS_REVIEW' && a.detail !== 'READY_ONE_CLICK').length;
+  for (const k of ['SECURITY_CHALLENGE', 'APPLIED', 'FAILED']) {
+    document.getElementById(`st-${k}`).textContent = counts[k];
+  }
+  const autoCount = apps.filter(a => a.status === 'APPLIED' && /Applied automatically/.test(a.notes || '')).length;
+  document.getElementById('st-AUTO').textContent = autoCount ? `${autoCount} automatically` : '';
+
+  const q = document.getElementById('search').value.toLowerCase();
+  const fs = document.getElementById('fStatus').value;
+  const fp = document.getElementById('fPlatform').value;
+  const rows = apps.filter(a => (!fs || a.status === fs) && (!fp || a.platform === fp)
+    && (!q || `${a.company} ${a.job_title}`.toLowerCase().includes(q)));
+  document.getElementById('all-rows').innerHTML = rows.length ? rows.map(a => `
+    <tr>
+      <td class="ts">${esc(when(a.updated_at))}</td><td>${esc(a.company)}</td><td>${esc(a.job_title)}</td>
+      <td>${esc(a.platform)}${a.source ? `<br><span class="notes">${esc(a.source)}</span>` : ''}</td><td>${esc(a.fit_score)}</td>
+      <td>${badge(a.status)}</td>
+      <td class="notes">${a.next_action ? `<strong>${esc(a.next_action)}</strong><br>` : ''}${esc(a.notes)}${a.needs_input ? `<div class="needs">Needs: ${esc(a.needs_input)}</div>` : ''}</td>
+      <td><a href="${safeUrl(a.job_url)}" target="_blank" rel="noopener">open ↗</a>${!FINAL.includes(a.status) ? `<br><button class="btn btn-2" onclick="retry('${esc(a.id)}')">Retry</button>` : ''}</td>
+    </tr>`).join('') : '<tr><td colspan="8" class="empty">No applications logged yet.</td></tr>';
+}
+
+async function review(id) {
+  const r = await fetch(`${HELPER}/review/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  const d = await r.json();
+  alert(d.message || d.error);
+}
+
+async function mark(id, status) {
+  const label = status === 'APPLIED' ? 'Mark this as SUBMITTED (you clicked Submit on the site)?' : 'Skip this job (logged as REJECTED)?';
+  if (!confirm(label)) return;
+  await fetch(`${HELPER}/mark/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+  load();
+}
+
+async function retryOne(id) {
+  const r = await fetch(`${HELPER}/retry/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  return r.json();
+}
+
+async function retry(id) {
+  const d = await retryOne(id);
+  alert(d.error || d.message || `Now ${LABEL[d.record.status] || d.record.status}: ${d.record.next_action || d.record.notes || ''}`);
+  load();
+}
+
+// After running setup\LOGIN_ONCE.bat, re-prepares every job that failed only for lack of a login.
+async function retryLoginFailures() {
+  const targets = apps.filter(a => !FINAL.includes(a.status) && /LOGIN_ONCE/.test(`${a.next_action || ''} ${a.notes || ''}`));
+  if (!targets.length) return alert('No login failures to retry.');
+  if (!confirm(`Retry ${targets.length} job(s)? Each one takes up to a minute.`)) return;
+  let ready = 0;
+  for (const a of targets) {
+    const d = await retryOne(a.id).catch(() => ({}));
+    if (d.record && d.record.status !== 'SECURITY_CHALLENGE') ready++;
+  }
+  alert(`${ready} of ${targets.length} got past the login check.`);
+  load();
+}
+
+// ---------- Find jobs ----------
+const postJson = (p, b) => fetch(`${HELPER}${p}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b || {}) }).then(r => r.json());
+
+async function runVisible(platform, { ask = true } = {}) {
+  const el = document.getElementById('visible-result');
+  if (ask && !confirm(`Open a visible ${platform} browser window and read job results? It runs slowly (15-30 minutes); if a check appears, solve it in that window.`)) return;
+  el.textContent = `Visible ${platform} search running… a browser window will open. Don't close it until it finishes.`;
+  try {
+    const r = await postJson(`/discover/visible/${platform}`);
+    el.textContent = r.error ? r.error
+      : r.blocked ? `${platform}: stopped after ${r.searches || 0} search(es). BLOCKED by ${r.blocked.kind} (${r.blocked.detail || ''}). Found ${r.found}, sent ${r.queued} to the pipeline.`
+      : `${platform}: read ${r.searches || 0} search page(s), found ${r.found} new job(s), sent ${r.queued} to the pipeline.`;
+  } catch (e) { el.textContent = `Failed: ${e.message}`; }
+  loadDiscovery();
+}
+
+// Opens the next N waiting native jobs in your normal browser (tabs), 1 s apart. Clicks nothing.
+async function openNext(n) {
+  const list = apps.filter(a => REVIEW.includes(a.status) && ['naukri', 'foundit', 'indeed'].includes(a.platform) && !a.external_apply_url).slice(0, n);
+  if (!list.length) return alert('No waiting Naukri / foundit / Indeed jobs.');
+  for (const a of list) {
+    await fetch(`${HELPER}/review/${a.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {});
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  alert(`Opened ${list.length} job(s) in your browser. Apply there, then click Mark submitted for each one here.`);
+}
+
+async function intake(which) {
+  const el = document.getElementById('intake-result');
+  el.textContent = which === 'email' ? 'Reading your job-alert emails…' : 'Reading company job boards…';
+  try {
+    const r = await postJson(`/intake/${which}`);
+    el.textContent = r.skipped ? r.skipped : r.error ? r.error : `Found ${r.found ?? 0}, sent ${r.queued ?? 0} new to the pipeline.`;
+  } catch (e) { el.textContent = `Failed: ${e.message}`; }
+  loadDiscovery();
+}
+
+async function resolveParked() {
+  const r = await postJson('/recovery/resolve');
+  alert(r.error || (r.queued ? `Resolving ${r.queued} parked job(s). A browser window opens for each — solve any check shown, and it resumes.` : 'Nothing parked to resolve.'));
+  refreshStatus();
+}
+
+async function recheck(which) {
+  const msg = which === 'all'
+    ? 'Re-check every open Naukri / foundit job in the agent\'s browser window (read-only, about 15 s per job)? This finds out exactly what each one needs.'
+    : 'Check the "click Apply" jobs on Naukri / foundit (read-only)? Jobs that now show "Applied" are marked APPLIED.';
+  if (!confirm(msg)) return;
+  const r = await postJson('/recheck', { which });
+  alert(r.error || (r.queued ? `Checking ${r.queued} job(s) now. Progress shows above the list; results appear in the Sheet as they finish.` : 'Nothing to check.'));
+  refreshStatus();
+}
+
+async function autoApplyWaiting() {
+  if (!confirm('Apply automatically to the waiting jobs that qualify (score 80+)? A browser window opens for each one, 20 s apart. If a check or unknown question appears, that job is left for you.')) return;
+  const r = await postJson('/auto-apply/pending');
+  alert(r.error || (r.queued ? `Applying to ${r.queued} job(s) now:\n${(r.jobs || []).join('\n')}` : 'No waiting jobs qualify for auto-apply.'));
+  refreshStatus();
+}
+
+// Banner + policy line + schedule, from /discovery/status (polled every 5 s).
+// Tell the helper you're at the laptop (only while this tab is visible), so recovery may wait for you.
+function heartbeat() {
+  if (document.visibilityState === 'visible') fetch(`${HELPER}/heartbeat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {});
+}
+
+async function refreshStatus() {
+  heartbeat();
+  let d = null;
+  try { d = await fetch(`${HELPER}/discovery/status`).then(r => r.json()); } catch (_) { return; }
+  let rec = { parked: [] };
+  try { rec = await fetch(`${HELPER}/recovery/status`).then(r => r.json()); } catch (_) {}
+  const pb = document.getElementById('parked-banner');
+  if (rec.parked && rec.parked.length) {
+    document.getElementById('parked-text').textContent = `${rec.parked.length} job(s) hit a check while you were away and are parked${rec.resolving ? ' (resolving…)' : ''}.`;
+    pb.style.display = rec.resolving ? 'none' : 'block';
+  } else pb.style.display = 'none';
+  const w = d.waiting_for_you;
+  const banner = document.getElementById('hitl-banner');
+  if (w) {
+    const mins = Math.max(0, Math.round((Date.parse(w.until) - Date.now()) / 60000));
+    banner.textContent = `⚠ ${w.site || 'A site'} needs you: solve the ${w.kind} check in the open browser window (${w.task || 'agent'}). It continues by itself when the check is gone; waiting about ${mins} more min.`;
+    banner.style.display = 'block';
+  } else banner.style.display = 'none';
+  const a = d.auto_apply || {};
+  document.getElementById('policy-line').textContent = a.platforms && a.platforms.length
+    ? `Auto-apply is ON for ${a.platforms.join(' & ')} at score ${a.min_score}+ (one verified click, in a visible window). Scores 70-${a.min_score - 1}, Indeed and company-site forms wait for you.`
+    : 'Auto-apply is off: the agent prepares applications and you submit them.';
+  const btn = document.getElementById('auto-pending-btn');
+  btn.style.display = a.waiting_jobs_that_qualify ? 'inline-block' : 'none';
+  btn.textContent = a.running ? '⏳ Auto-applying…' : `⚡ Auto-apply ${a.waiting_jobs_that_qualify} waiting job(s) (80+)`;
+  const rc = d.recheck || {};
+  document.getElementById('recheck-line').textContent = rc.running
+    ? `Re-check (${rc.running.which}) running: ${rc.running.done}/${rc.running.total} done ${JSON.stringify(rc.running.changed)}`
+    : rc.last ? `Last re-check (${rc.last.which}, ${when(rc.last.finished)}): ${Object.entries(rc.last.changed).map(([k, v]) => `${LABEL[k] || k} ${v}`).join(', ')}` : '';
+  const s = d.schedule || {};
+  const last = s.last && s.last.lastSlot ? ` · last: ${s.last.lastSlot.replace('T', ' ')}${s.last.results ? ' (' + Object.entries(s.last.results).map(([p, r]) => `${p}: ${r.error ? r.error : r.blocked ? 'blocked ' + r.blocked : r.found + ' new'}`).join(', ') + ')' : ''}` : '';
+  document.getElementById('schedule-line').textContent = s.next
+    ? `Automatic visible search: next ${s.next.replace('T', ' ')} (${(s.platforms || []).join(' → ')})${s.running ? ' · running now' : ''}${last}`
+    : 'No automatic search scheduled (config/search.json "schedule").';
+}
+
+async function pasteJob() {
+  const el = document.getElementById('paste-result');
+  const body = {
+    url: document.getElementById('pj-url').value.trim(),
+    title: document.getElementById('pj-title').value.trim(),
+    company: document.getElementById('pj-company').value.trim(),
+    location: document.getElementById('pj-location').value.trim(),
+    description: document.getElementById('pj-desc').value.trim()
+  };
+  if (!body.url) { el.textContent = 'Paste a job link first.'; return; }
+  el.textContent = 'Checking the job…';
+  try {
+    const r = await postJson('/discover/manual', body);
+    if (r.error) { el.textContent = r.error; return; }
+    el.textContent = `Sent to the agent: ${r.job.company} - ${r.job.job_title} (${r.job.platform}). It will be scored and, if it scores 70+, prepared for your review.`;
+    ['pj-url', 'pj-title', 'pj-company', 'pj-location', 'pj-desc'].forEach(id => { document.getElementById(id).value = ''; });
+  } catch (e) { el.textContent = `Failed: ${e.message}`; }
+  loadDiscovery();
+}
+
+async function loadDiscovery() {
+  let d = { platforms: {}, feeder: {} };
+  try { d = await fetch(`${HELPER}/discovery/status`).then(r => r.json()); } catch (_) {}
+  const rows = ['email', 'boards', 'naukri', 'foundit', 'indeed', 'manual'].map(p => {
+    const s = d.platforms[p];
+    const name = { email: 'Email alerts', boards: 'Company boards', manual: 'Pasted jobs' }[p] || p;
+    if (!s) return `<tr><td>${esc(name)}</td><td colspan="5" class="notes">No runs yet.</td></tr>`;
+    const blocked = s.blocked ? `<span class="status s-SECURITY_CHALLENGE">BLOCKED: ${esc(s.blocked.kind)}</span> ${esc(s.blocked.detail || '')}` : '';
+    const st = s.stats;
+    if (p === 'email' || p === 'boards') {
+      const extra = p === 'email' && st ? `${st.emails || 0} email(s) read` : p === 'boards' && st ? `${st.companies || 0} board(s) read` : '';
+      return `<tr><td>${esc(name)}</td><td class="ts">${esc(when(s.at))}</td><td>${esc(s.mode)}${s.trigger ? ` (${esc(s.trigger)})` : ''}</td><td>${esc(s.found ?? 0)}</td><td>${esc(s.queued ?? 0)}</td><td class="notes">${esc(s.error || extra)}</td></tr>`;
+    }
+    const pre = st && st.sitePreFiltered ? `, site results ${st.sitePreFiltered.apiResults} (reposts ${st.sitePreFiltered.skippedApplyHost}, too senior ${st.sitePreFiltered.overExperienced})` : '';
+    const why = st && (st.filteredLocation || st.filteredExperience) ? ` (location ${st.filteredLocation || 0}, experience ${st.filteredExperience || 0})` : '';
+    const more = st ? `${st.notSentOverLimit ? ` · ${st.notSentOverLimit} left for the next run` : ''}${st.checksSolvedByYou ? ` · ${st.checksSolvedByYou} check(s) solved by you` : ''}` : '';
+    const funnel = st ? `<div class="needs">Read ${st.extracted} job card(s)${pre}; already seen ${st.alreadySeen}, filtered ${st.filteredOut}${why}, duplicates ${st.duplicateInRun} → ${s.found} new${s.searches != null ? ` · ${s.searches} search page(s)` : ''}${more}</div>` : '';
+    const trig = s.trigger ? ` (${esc(s.trigger)})` : '';
+    return `<tr><td>${esc(name)}</td><td class="ts">${esc(when(s.at))}</td><td>${esc(s.mode)}${trig}</td><td>${esc(s.found)}</td><td>${esc(s.queued)}</td><td class="notes">${blocked} ${esc(s.note || '')}${funnel}</td></tr>`;
+  });
+  document.getElementById('discovery-rows').innerHTML = rows.join('');
+  const src = d.intake_status || {};
+  const il = document.getElementById('intake-line');
+  if (il) il.innerHTML = `Email alerts: ${src.email_connected ? '<span class="ok">connected</span>' : 'not connected — run <code>node setup\\gmail_auth.js</code>'} · Company boards: ${src.boards || 0} in config/companies.json`;
+  const f = d.feeder || {};
+  document.getElementById('feeder-line').textContent = `Pipeline queue: ${f.pending || 0} waiting · ${f.sent || 0} sent · ${f.skipped || 0} skipped as duplicates · ${f.failed || 0} failed (since the helper started).`;
+}
+
+// Visible search for one site or all sites in turn (the old headless scrapes were always blocked).
+async function runScrape() {
+  const t = document.getElementById('scrapeTarget').value;
+  const list = t === 'all' ? ['naukri', 'foundit', 'indeed'] : [t];
+  if (!confirm(`Run a visible search on ${list.join(' → ')}? A browser window opens and works slowly (about 15-30 min per site). If a check appears, solve it in that window.`)) return;
+  switchTab('find');
+  for (const p of list) await runVisible(p, { ask: false });
+}
+
+async function health() {
+  const probe = async (id, name, url, cors) => {
+    const el = document.getElementById(id);
+    try {
+      await fetch(url, { mode: cors ? 'cors' : 'no-cors', signal: AbortSignal.timeout(2500) });
+      el.innerHTML = `<span class="ok">● ${name}</span>`;
+    } catch (_) { el.innerHTML = `<span class="down">● ${name} down</span>`; }
+  };
+  probe('h-n8n', 'n8n', `${N8N}/healthz`);
+  probe('h-helper', 'Helper', `${HELPER}/health`, true);
+  probe('h-ollama', 'Ollama', 'http://127.0.0.1:11434/');
+}
+
+load(); health(); refreshStatus();
+setInterval(load, 30000); setInterval(health, 30000); setInterval(refreshStatus, 5000);
+</script>
+</body>
+</html>

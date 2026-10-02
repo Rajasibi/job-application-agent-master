@@ -1,0 +1,311 @@
+{
+  "id": "app-logger-workflow",
+  "name": "App Logger — Google Sheets + Local",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "log-application",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "b695e9e3-f975-4df1-a8f2-7e6cc81487d0",
+      "webhookId": "1bd02023-43d5-4d20-8acb-bbfc1a5a29f5",
+      "name": "Webhook: /log-application",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9999/log",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ record: $json.body }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "61c493be-2da5-4ef3-8fab-6e15f1819b3c",
+      "name": "Local Log (applied_jobs.json)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "1801dc8f-7889-48c5-b1d7-1b2a8914b32e",
+              "leftValue": "={{ $json.sheets_enabled }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "fe5a38b2-c029-4819-9c27-6b9715200ea8",
+      "name": "Sheets Configured?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const r = $json.record;\nreturn { json: { sheets_id: $json.sheets_id, row: {\n  'Timestamp': r.updated_at || r.timestamp,\n  'Company': r.company || '',\n  'Job Title': r.job_title || '',\n  'Platform': r.platform || '',\n  'Location': r.location || '',\n  'Fit Score': r.fit_score ?? '',\n  'CV Variant': r.cv_variant || '',\n  'Cover Letter': r.cover_letter || 'No',\n  'Status': r.status,\n  'Job URL': r.job_url,\n  'Notes': r.notes || ''\n} } };"
+      },
+      "id": "252ee1e3-2864-442b-9968-bea469d2c851",
+      "name": "Format Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $json.sheets_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Applications",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $json.row['Timestamp'] }}",
+            "Company": "={{ $json.row['Company'] }}",
+            "Job Title": "={{ $json.row['Job Title'] }}",
+            "Platform": "={{ $json.row['Platform'] }}",
+            "Location": "={{ $json.row['Location'] }}",
+            "Fit Score": "={{ $json.row['Fit Score'] }}",
+            "CV Variant": "={{ $json.row['CV Variant'] }}",
+            "Cover Letter": "={{ $json.row['Cover Letter'] }}",
+            "Status": "={{ $json.row['Status'] }}",
+            "Job URL": "={{ $json.row['Job URL'] }}",
+            "Notes": "={{ $json.row['Notes'] }}"
+          },
+          "matchingColumns": [
+            "Job URL"
+          ],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Job Title",
+              "displayName": "Job Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Location",
+              "displayName": "Location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Fit Score",
+              "displayName": "Fit Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "CV Variant",
+              "displayName": "CV Variant",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Cover Letter",
+              "displayName": "Cover Letter",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Job URL",
+              "displayName": "Job URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9d880540-d653-432a-b43c-4e996aba03cc",
+      "name": "Google Sheets — Upsert Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1120,
+        300
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "jobAgentGoogleSA",
+          "name": "Job Agent Google Service Account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {},
+      "id": "366bd1ed-16be-4373-b96d-c89475726bbd",
+      "name": "Local Only",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: /log-application": {
+      "main": [
+        [
+          {
+            "node": "Local Log (applied_jobs.json)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Local Log (applied_jobs.json)": {
+      "main": [
+        [
+          {
+            "node": "Sheets Configured?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets Configured?": {
+      "main": [
+        [
+          {
+            "node": "Format Row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Local Only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Row": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets — Upsert Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

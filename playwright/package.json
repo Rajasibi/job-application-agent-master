@@ -1,0 +1,19 @@
+{
+  "name": "job-agent-playwright",
+  "version": "1.0.0",
+  "description": "Playwright scripts for job application automation",
+  "scripts": {
+    "test": "node ../setup/test_scorer.js",
+    "test:indeed": "node test_indeed_form.js",
+    "indeed:review": "node indeed_review.js",
+    "install-browsers": "npx playwright install chromium"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "marked": "^18.0.14",
+    "minimist": "^1.2.8",
+    "playwright": "^1.44.0",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  }
+}

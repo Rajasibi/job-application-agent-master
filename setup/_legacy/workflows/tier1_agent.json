@@ -1,0 +1,75 @@
+{
+  "name": "Executor — Tier 1 Agent (Manual Review)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "apply-tier1",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-apply-tier1",
+      "name": "Webhook: /apply-tier1",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const stdout = $input.first().json.stdout || '';\nconst data = $('Webhook: /apply-tier1').first().json.body || $('Webhook: /apply-tier1').first().json;\n\nlet result;\ntry {\n  const jsonMatch = stdout.match(/\\{[\\s\\S]*\\}/);\n  result = jsonMatch ? JSON.parse(jsonMatch[0]) : { ready_for_review: false, error: 'No JSON output' };\n} catch (e) {\n  result = { ready_for_review: false, error: `Parse error: ${e.message}` };\n}\n\nreturn [{\n  json: {\n    ...data,\n    ready_for_review: result.ready_for_review,\n    screenshot_path: result.screenshot || '',\n    form_url: result.form_url || data.job_url,\n    status: 'AWAITING_MANUAL_SUBMIT',\n    notes: `Form filled and ready for review. Screenshot: ${result.screenshot || 'N/A'}`\n  }\n}];"
+      },
+      "id": "fn-package-review",
+      "name": "Package for Review",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://localhost:5678/webhook/log-application",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify($json)}}",
+        "options": {}
+      },
+      "id": "http-log-tier1",
+      "name": "Log as Pending Submit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        900,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: /apply-tier1": {
+      "main": [
+        []
+      ]
+    },
+    "Package for Review": {
+      "main": [
+        [
+          {
+            "node": "Log as Pending Submit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "tier1-agent-workflow"
+}

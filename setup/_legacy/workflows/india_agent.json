@@ -1,0 +1,124 @@
+{
+  "name": "Executor — India Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "apply-india",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-apply-india",
+      "name": "Webhook: /apply-india",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const data = $input.first().json.body || $input.first().json;\nconst platform = (data.source_platform || '').toLowerCase();\n\nlet scriptName;\nif (platform.includes('linkedin')) {\n  scriptName = 'linkedin_apply.js';\n} else if (platform.includes('naukri')) {\n  scriptName = 'naukri_apply.js';\n} else {\n  // Default to direct URL apply for Indeed and others\n  scriptName = 'linkedin_apply.js'; // Fallback\n}\n\nreturn [{ json: { ...data, scriptName } }];"
+      },
+      "id": "fn-platform-router",
+      "name": "Platform Router",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const stdout = $input.first().json.stdout || '';\nconst stderr = $input.first().json.stderr || '';\nconst prev = $('Platform Router').first().json;\n\nlet result;\ntry {\n  const jsonMatch = stdout.match(/\\{[\\s\\S]*\\}/);\n  result = jsonMatch ? JSON.parse(jsonMatch[0]) : { success: false, error: 'No JSON in output' };\n} catch (e) {\n  result = { success: false, error: `Parse error: ${e.message}. stdout: ${stdout.substring(0, 200)}` };\n}\n\nreturn [{\n  json: {\n    ...prev,\n    apply_success: result.success,\n    screenshot_path: result.screenshot || '',\n    error_message: result.error || '',\n    status: result.success ? 'APPLIED' : 'FAILED'\n  }\n}];"
+      },
+      "id": "fn-parse-result",
+      "name": "Parse Result",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://localhost:5678/webhook/log-application",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify($json)}}",
+        "options": {}
+      },
+      "id": "http-log-india",
+      "name": "Log to Sheets",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.apply_success}}",
+              "value2": false
+            }
+          ]
+        }
+      },
+      "id": "if-failed",
+      "name": "IF: Failed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        500
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: /apply-india": {
+      "main": [
+        [
+          {
+            "node": "Platform Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Platform Router": {
+      "main": [
+        []
+      ]
+    },
+    "Parse Result": {
+      "main": [
+        [
+          {
+            "node": "Log to Sheets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF: Failed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "india-agent-workflow"
+}

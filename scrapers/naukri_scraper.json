@@ -1,0 +1,208 @@
+{
+  "id": "naukri-scraper-workflow",
+  "name": "Scraper — Naukri",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 1-23/4 * * *"
+            }
+          ]
+        }
+      },
+      "id": "c97303d2-31f1-4a7e-bc7a-19f3453d3b99",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "73ae69a6-58fd-414c-b33b-30050628bfd9",
+      "name": "Run Manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "run-scraper-naukri",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "bdfc611c-43ce-498b-be04-e73a0b10a34d",
+      "webhookId": "1a36ad0a-7d2d-44e2-89eb-d7de89545490",
+      "name": "Run From Dashboard",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9999/scrape/naukri",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({}) }}",
+        "options": {
+          "timeout": 2400000
+        }
+      },
+      "id": "1398e9ac-0c2e-4d93-a31e-3ff8337f8667",
+      "name": "Scrape naukri",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const r = $input.first().json;\nif (r.error) throw new Error('Scraper error: ' + r.error);\nreturn (r.jobs || []).map(j => ({ json: j }));"
+      },
+      "id": "5b9b87da-fd20-48fb-b1ea-78e611adfd21",
+      "name": "One Item Per Job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5678/webhook/score-job",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 5400000
+        }
+      },
+      "id": "3f4a8b2e-1309-48e5-9911-b3791a099fdb",
+      "name": "Score Job (one at a time)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "17de148b-41b1-45c5-bbd1-4b0e3316a1e3",
+      "name": "Loop Over Jobs",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        900,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Scrape naukri",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Manually": {
+      "main": [
+        [
+          {
+            "node": "Scrape naukri",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run From Dashboard": {
+      "main": [
+        [
+          {
+            "node": "Scrape naukri",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape naukri": {
+      "main": [
+        [
+          {
+            "node": "One Item Per Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One Item Per Job": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Jobs": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Score Job (one at a time)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score Job (one at a time)": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

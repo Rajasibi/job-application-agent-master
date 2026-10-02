@@ -1,0 +1,12 @@
+Initializing n8n process
+Error tracking disabled because this release is older than 6 weeks.
+Deprecation warning: The storage directory "C:\Users\Dev\.n8n\binaryData" will be renamed to "C:\Users\Dev\.n8n\storage" in n8n v3. To migrate now, set N8N_MIGRATE_FS_STORAGE_PATH=true. If you have a volume mounted at the old path, update your mount configuration after migration.
+n8n ready on ::, port 5678
+n8n Task Broker ready on 127.0.0.1, port 5679
+Failed to start Python task runner in internal mode. because its virtual environment is missing from this system. Launching a Python runner in internal mode is intended only for debugging and is not recommended for production. Users are encouraged to deploy in external mode. See: https://docs.n8n.io/hosting/configuration/task-runners/#setting-up-external-mode
+[license SDK] Skipping renewal on init: license cert is not due for renewal
+Registered runner "JS Task Runner" (RK1TF6kZHP8FnNakS5EbY) 
+Version: 2.14.2
+Building workflow dependency index...
+Start Active Workflows:
+Activated workflow "My workflow 18" (ID: JAnRXjTcrCERxZMB)

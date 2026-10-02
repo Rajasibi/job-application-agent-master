@@ -1,0 +1,19 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Apply</title></head>
+<body>
+<form onsubmit="event.preventDefault(); fetch('/__submitted');">
+  <label>Full name * <input name="n" required></label>
+  <label>Phone number * <input type="tel" name="ph" id="ph" required></label>
+  <div class="error" id="phErr" style="display:none">Include the country code, e.g. +91 98765 43210</div>
+  <button type="submit" onclick="fetch('/__submitted')">Submit</button>
+</form>
+<script>
+  // The site insists on a +country-code phone format.
+  const ph = document.getElementById('ph');
+  ph.addEventListener('input', () => {
+    const bad = !ph.value.startsWith('+');
+    ph.setAttribute('aria-invalid', bad ? 'true' : 'false');
+    document.getElementById('phErr').style.display = bad ? 'block' : 'none';
+  });
+</script>
+</body></html>

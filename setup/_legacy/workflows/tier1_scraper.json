@@ -1,0 +1,180 @@
+[
+  {
+    "updatedAt": "2026-05-07T09:40:37.000Z",
+    "createdAt": "2026-05-05T11:49:23.265Z",
+    "id": "tier1-scraper-workflow",
+    "name": "Scraper — Tier 1 Career Pages",
+    "description": null,
+    "active": false,
+    "isArchived": false,
+    "nodes": [
+      {
+        "parameters": {
+          "functionCode": "const targets = [\n  {\n    company: 'Capgemini',\n    url: 'https://www.capgemini.com/jobs/search/?search_term=customer+success+operations+project+coordinator&location=india&radius=50',\n    api_url: 'https://www.capgemini.com/api/jobs?q=customer%20success%20operations&location=India'\n  },\n  {\n    company: 'Accenture',\n    url: 'https://www.accenture.com/in-en/careers/jobsearch?jkw=customer+success+operations+project+coordinator&jl=India&jepf=Regular'\n  },\n  {\n    company: 'JLL',\n    url: 'https://careers.jll.com/en/jobs?search=customer+success+operations&location=India'\n  },\n  {\n    company: 'CBRE',\n    url: 'https://careers.cbre.com/en_US/careers/SearchJobs/customer%20success%20operations?3_100_3=161512&3_100_3=161477'\n  },\n  {\n    company: 'EY',\n    url: 'https://careers.ey.com/ey/search/#q=customer%20success%20operations%20project%20coordinator&t=Jobs&locationsearch=India'\n  }\n];\n\nreturn targets.map(t => ({ json: { ...t, source_platform: 'tier1' } }));"
+        },
+        "id": "fn-build-tier1-targets",
+        "name": "Build Tier1 Targets",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [
+          460,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "={{$json.url}}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "User-Agent",
+                "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+              },
+              {
+                "name": "Accept",
+                "value": "text/html,application/xhtml+xml,application/json"
+              }
+            ]
+          },
+          "options": {
+            "timeout": 20000
+          }
+        },
+        "id": "http-fetch-tier1",
+        "name": "Fetch Career Page",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [
+          680,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "functionCode": "const html = typeof $input.first().json === 'string' ? $input.first().json : JSON.stringify($input.first().json);\nconst prev = $('Build Tier1 Targets').first().json;\n\nconst keywords = ['customer success', 'operations', 'coordinator', 'project', 'business development', 'client', 'account manager'];\n\n// Extract job links from page\nconst linkMatches = html.match(/href=\"([^\"]*job[^\"]*|[^\"]*career[^\"]*|[^\"]*position[^\"]*)\"/gi) || [];\nconst jobs = [];\nconst seenUrls = new Set();\n\nfor (const link of linkMatches) {\n  const urlMatch = link.match(/href=\"([^\"]+)\"/);\n  if (!urlMatch) continue;\n  let url = urlMatch[1];\n  if (!url.startsWith('http')) {\n    const base = new URL(prev.url);\n    url = `${base.protocol}//${base.host}${url.startsWith('/') ? '' : '/'}${url}`;\n  }\n  if (seenUrls.has(url)) continue;\n  seenUrls.add(url);\n\n  // Check if surrounding text contains relevant keywords\n  const urlLower = url.toLowerCase();\n  const hasKeyword = keywords.some(k => urlLower.includes(k.replace(/ /g, '-')) || urlLower.includes(k.replace(/ /g, '_')));\n  \n  if (hasKeyword || url.includes('/job/') || url.includes('/jobs/') || url.includes('/position/')) {\n    jobs.push({\n      job_url: url,\n      company: prev.company,\n      source_platform: 'tier1_' + prev.company.toLowerCase(),\n      job_title: url.split('/').pop().replace(/-/g, ' ').replace(/_/g, ' ') || 'See listing',\n      location: 'India',\n      description: `${prev.company} job posting. Review at: ${url}`\n    });\n  }\n}\n\n// Limit to 10 per company to avoid flooding\nreturn jobs.slice(0, 10).map(j => ({ json: j }));"
+        },
+        "id": "fn-parse-tier1",
+        "name": "Parse Job Links",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [
+          900,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "functionCode": "const fs = require('fs');\nconst path = require('path');\n\nconst cacheDir = 'C:/Users/Dev/Desktop/Job Agents/job-agent/setup/cache';\nif (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });\n\n// Per-platform cache file\nconst item = $input.first().json;\nconst platform = item.source_platform || 'unknown';\nconst cacheFile = path.join(cacheDir, `seen_${platform.replace(/[^a-z0-9_]/gi, '_')}.json`);\n\nlet seen = [];\ntry { seen = JSON.parse(fs.readFileSync(cacheFile, 'utf-8')); } catch (e) {}\n\nconst url = item.job_url || item.job_id || '';\nif (!url) return [];\nif (seen.includes(url)) return []; // Already seen\n\nseen.push(url);\nif (seen.length > 5000) seen = seen.slice(-3000);\nfs.writeFileSync(cacheFile, JSON.stringify(seen));\n\nreturn [{ json: item }];"
+        },
+        "id": "fn-dedup-tier1",
+        "name": "Deduplicate",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [
+          1120,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=http://127.0.0.1:5678/webhook/score-job",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{JSON.stringify($json)}}",
+          "options": {}
+        },
+        "id": "http-trigger-scorer-tier1",
+        "name": "Trigger Fit Scorer",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [
+          1340,
+          300
+        ]
+      }
+    ],
+    "connections": {
+      "Build Tier1 Targets": {
+        "main": [
+          [
+            {
+              "node": "Fetch Career Page",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch Career Page": {
+        "main": [
+          [
+            {
+              "node": "Parse Job Links",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse Job Links": {
+        "main": [
+          [
+            {
+              "node": "Deduplicate",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Deduplicate": {
+        "main": [
+          [
+            {
+              "node": "Trigger Fit Scorer",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null,
+    "meta": null,
+    "pinData": null,
+    "versionId": "d7b5056d-0802-4e9c-b12e-c2285249631e",
+    "activeVersionId": "d7b5056d-0802-4e9c-b12e-c2285249631e",
+    "versionCounter": 31,
+    "triggerCount": 1,
+    "tags": [],
+    "shared": [
+      {
+        "updatedAt": "2026-05-05T11:49:23.270Z",
+        "createdAt": "2026-05-05T11:49:23.270Z",
+        "role": "workflow:owner",
+        "workflowId": "tier1-scraper-workflow",
+        "projectId": "XxRfzNcZZPKbVFJ4",
+        "project": {
+          "updatedAt": "2025-09-11T18:16:29.262Z",
+          "createdAt": "2025-09-11T18:15:47.340Z",
+          "id": "XxRfzNcZZPKbVFJ4",
+          "name": "Dev Rajput <rajputdev77@gmail.com>",
+          "type": "personal",
+          "icon": null,
+          "description": null,
+          "creatorId": "10df8a02-98c1-4628-8f50-17fb05a8dd57"
+        }
+      }
+    ],
+    "versionMetadata": {
+      "name": null,
+      "description": null
+    }
+  }
+]

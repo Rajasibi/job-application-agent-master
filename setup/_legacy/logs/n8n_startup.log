@@ -1,0 +1,94 @@
+ 
+================================================ 
+Boot at 07-05-2026 14:44:08.68 
+================================================ 
+[07-05-2026 14:44:08.72] Checking port 5678... 
+[07-05-2026 14:44:11.13] Activating Job Agent workflows... 
+Deprecation warning: The storage directory "C:\Users\Dev\.n8n\binaryData" will be renamed to "C:\Users\Dev\.n8n\storage" in n8n v3. To migrate now, set N8N_MIGRATE_FS_STORAGE_PATH=true. If you have a volume mounted at the old path, update your mount configuration after migration.
+⚠️  WARNING: The "update:workflow" command is deprecated.
+
+Publishing workflow fit-scorer-workflow with current version
+Please use: publish:workflow --id=fit-scorer-workflow
+
+Note: Changes will not take effect if n8n is running.
+Please restart n8n for changes to take effect if n8n is currently running.
+Deprecation warning: The storage directory "C:\Users\Dev\.n8n\binaryData" will be renamed to "C:\Users\Dev\.n8n\storage" in n8n v3. To migrate now, set N8N_MIGRATE_FS_STORAGE_PATH=true. If you have a volume mounted at the old path, update your mount configuration after migration.
+⚠️  WARNING: The "update:workflow" command is deprecated.
+
+Publishing workflow cv-builder-workflow with current version
+Please use: publish:workflow --id=cv-builder-workflow
+
+Note: Changes will not take effect if n8n is running.
+Please restart n8n for changes to take effect if n8n is currently running.
+Deprecation warning: The storage directory "C:\Users\Dev\.n8n\binaryData" will be renamed to "C:\Users\Dev\.n8n\storage" in n8n v3. To migrate now, set N8N_MIGRATE_FS_STORAGE_PATH=true. If you have a volume mounted at the old path, update your mount configuration after migration.
+⚠️  WARNING: The "update:workflow" command is deprecated.
+
+Publishing workflow app-logger-workflow with current version
+Please use: publish:workflow --id=app-logger-workflow
+
+Note: Changes will not take effect if n8n is running.
+Please restart n8n for changes to take effect if n8n is currently running.
+Deprecation warning: The storage directory "C:\Users\Dev\.n8n\binaryData" will be renamed to "C:\Users\Dev\.n8n\storage" in n8n v3. To migrate now, set N8N_MIGRATE_FS_STORAGE_PATH=true. If you have a volume mounted at the old path, update your mount configuration after migration.
+⚠️  WARNING: The "update:workflow" command is deprecated.
+
+Publishing workflow india-agent-workflow with current version
+Please use: publish:workflow --id=india-agent-workflow
+
+Note: Changes will not take effect if n8n is running.
+Please restart n8n for changes to take effect if n8n is currently running.
+Deprecation warning: The storage directory "C:\Users\Dev\.n8n\binaryData" will be renamed to "C:\Users\Dev\.n8n\storage" in n8n v3. To migrate now, set N8N_MIGRATE_FS_STORAGE_PATH=true. If you have a volume mounted at the old path, update your mount configuration after migration.
+⚠️  WARNING: The "update:workflow" command is deprecated.
+
+Publishing workflow abroad-agent-workflow with current version
+Please use: publish:workflow --id=abroad-agent-workflow
+
+Note: Changes will not take effect if n8n is running.
+Please restart n8n for changes to take effect if n8n is currently running.
+Deprecation warning: The storage directory "C:\Users\Dev\.n8n\binaryData" will be renamed to "C:\Users\Dev\.n8n\storage" in n8n v3. To migrate now, set N8N_MIGRATE_FS_STORAGE_PATH=true. If you have a volume mounted at the old path, update your mount configuration after migration.
+⚠️  WARNING: The "update:workflow" command is deprecated.
+
+Publishing workflow tier1-agent-workflow with current version
+Please use: publish:workflow --id=tier1-agent-workflow
+
+Note: Changes will not take effect if n8n is running.
+Please restart n8n for changes to take effect if n8n is currently running.
+Deprecation warning: The storage directory "C:\Users\Dev\.n8n\binaryData" will be renamed to "C:\Users\Dev\.n8n\storage" in n8n v3. To migrate now, set N8N_MIGRATE_FS_STORAGE_PATH=true. If you have a volume mounted at the old path, update your mount configuration after migration.
+⚠️  WARNING: The "update:workflow" command is deprecated.
+
+Publishing workflow linkedin-scraper-workflow with current version
+Please use: publish:workflow --id=linkedin-scraper-workflow
+
+Note: Changes will not take effect if n8n is running.
+Please restart n8n for changes to take effect if n8n is currently running.
+Deprecation warning: The storage directory "C:\Users\Dev\.n8n\binaryData" will be renamed to "C:\Users\Dev\.n8n\storage" in n8n v3. To migrate now, set N8N_MIGRATE_FS_STORAGE_PATH=true. If you have a volume mounted at the old path, update your mount configuration after migration.
+⚠️  WARNING: The "update:workflow" command is deprecated.
+
+Publishing workflow naukri-scraper-workflow with current version
+Please use: publish:workflow --id=naukri-scraper-workflow
+
+Note: Changes will not take effect if n8n is running.
+Please restart n8n for changes to take effect if n8n is currently running.
+Deprecation warning: The storage directory "C:\Users\Dev\.n8n\binaryData" will be renamed to "C:\Users\Dev\.n8n\storage" in n8n v3. To migrate now, set N8N_MIGRATE_FS_STORAGE_PATH=true. If you have a volume mounted at the old path, update your mount configuration after migration.
+⚠️  WARNING: The "update:workflow" command is deprecated.
+
+Publishing workflow indeed-scraper-workflow with current version
+Please use: publish:workflow --id=indeed-scraper-workflow
+
+Note: Changes will not take effect if n8n is running.
+Please restart n8n for changes to take effect if n8n is currently running.
+Deprecation warning: The storage directory "C:\Users\Dev\.n8n\binaryData" will be renamed to "C:\Users\Dev\.n8n\storage" in n8n v3. To migrate now, set N8N_MIGRATE_FS_STORAGE_PATH=true. If you have a volume mounted at the old path, update your mount configuration after migration.
+⚠️  WARNING: The "update:workflow" command is deprecated.
+
+Publishing workflow wttj-scraper-workflow with current version
+Please use: publish:workflow --id=wttj-scraper-workflow
+
+Note: Changes will not take effect if n8n is running.
+Please restart n8n for changes to take effect if n8n is currently running.
+Deprecation warning: The storage directory "C:\Users\Dev\.n8n\binaryData" will be renamed to "C:\Users\Dev\.n8n\storage" in n8n v3. To migrate now, set N8N_MIGRATE_FS_STORAGE_PATH=true. If you have a volume mounted at the old path, update your mount configuration after migration.
+⚠️  WARNING: The "update:workflow" command is deprecated.
+
+Publishing workflow tier1-scraper-workflow with current version
+Please use: publish:workflow --id=tier1-scraper-workflow
+
+Note: Changes will not take effect if n8n is running.
+Please restart n8n for changes to take effect if n8n is currently running.

@@ -1,0 +1,10 @@
+{
+  "name": "job-agent-helper-service",
+  "version": "1.0.0",
+  "description": "HTTP helper service that runs Playwright commands for n8n",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {}
+}

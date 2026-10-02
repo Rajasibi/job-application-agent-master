@@ -1,0 +1,88 @@
+{
+  "_configured": true,
+  "_note": "Derived from Raja Sibi's CV (GenAI engineer, ~3 yrs). Tamil Nadu or remote only, no relocation; floor 9 LPA. Edit freely.",
+
+  "_autopilot_note": "false = nothing runs on its own (no scheduled searches, no email/board timers). The dashboard, Sheet and manual buttons still work. Set true to resume automatic discovery.",
+  "autopilot": true,
+
+  "maxJobsPerRun": 100,
+  "minSalaryLPA": 9,
+  "dailyLimitPerSite": null,
+
+  "schedule": {
+    "_note": "Automatic visible searches (local time). A browser window opens and searches each site in turn; leave it alone while it runs.",
+    "visibleSearch": ["09:30", "18:30"],
+    "platforms": ["naukri", "foundit", "indeed"]
+  },
+
+  "india": {
+    "enabled": true,
+    "locations": ["Chennai", "Coimbatore", "Remote"],
+    "roles": [
+      "Generative AI Engineer",
+      "Gen AI Engineer",
+      "GenAI Engineer",
+      "Generative AI Developer",
+      "Gen AI Developer",
+      "LLM Engineer",
+      "Large Language Model Engineer",
+      "LLM Developer",
+      "AI Engineer",
+      "Artificial Intelligence Engineer",
+      "AI Developer",
+      "Applied AI Engineer",
+      "AI ML Engineer",
+      "Machine Learning Engineer",
+      "ML Engineer",
+      "NLP Engineer",
+      "Natural Language Processing Engineer",
+      "RAG Engineer",
+      "Prompt Engineer",
+      "Python AI Developer"
+    ]
+  },
+
+  "abroad": {
+    "enabled": false,
+    "locations": [
+      { "city": "Amsterdam", "country": "Netherlands", "indeedDomain": "nl.indeed.com" },
+      { "city": "Berlin", "country": "Germany", "indeedDomain": "de.indeed.com" }
+    ],
+    "roles": ["Generative AI Engineer", "LLM Engineer"]
+  },
+
+  "naukri": {
+    "experience": "2",
+    "ctcFilter": ""
+  },
+
+  "discovery": {
+    "_note": "Visible search: max search pages per run; pages (and job-detail pages) are 5 s apart. A check you can solve (CAPTCHA, Cloudflare, login) waits up to humanWaitMinutes for you in the open window; Access Denied stops the run. Cards outside allowedLocations or asking more than maxMinExperience years are skipped before opening them.",
+    "visibleMaxSearches": 60,
+    "humanWaitMinutes": 5,
+    "allowedLocations": ["Chennai", "Coimbatore", "Tamil Nadu", "Remote", "Work from home", "WFH", "Anywhere"],
+    "maxMinExperience": 5
+  },
+
+  "foundit": {
+    "maxMinExperience": 5,
+    "skipApplyHosts": ["linkedin.com"]
+  },
+
+  "tier1": {
+    "enabled": false,
+    "keywords": "Generative AI",
+    "companies": ["Capgemini", "Accenture", "EY"]
+  },
+
+  "exclude": {
+    "titlePatterns": [
+      "\\bintern\\b", "internship", "trainee", "fresher",
+      "\\bprincipal\\b", "\\bstaff\\b", "\\bdirector\\b", "head of", "\\bvp\\b", "vice president",
+      "\\barchitect\\b", "\\bmanager\\b",
+      "\\bsales\\b", "telecaller", "data entry",
+      "\\bjava\\b", "\\.net\\b", "\\bios\\b", "android", "frontend", "front end"
+    ],
+    "companyPatterns": []
+  }
+}

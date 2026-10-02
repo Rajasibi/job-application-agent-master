@@ -1,0 +1,14 @@
+{
+  "name": "job-application-agent",
+  "private": true,
+  "description": "Local job application agent: n8n + Ollama + Playwright (review mode)",
+  "scripts": {
+    "helper": "node helper-service/server.js",
+    "test:scorer": "node setup/test_scorer.js",
+    "log:stats": "node playwright/application_log.js stats"
+  },
+  "dependencies": {
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  }
+}

@@ -1,0 +1,241 @@
+{
+  "name": "CV Builder — Ollama (Qwen)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "build-cv",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-build-cv",
+      "name": "Webhook: /build-cv",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const fs = require('fs');\nconst path = require('path');\n\nconst data = $input.first().json.body || $input.first().json;\nconst variant = (data.cv_variant || 'A').toUpperCase();\n\nconst cvFile = variant === 'B' ? 'cv_variant_b.md' : 'cv_variant_a.md';\nconst cvPath = path.join(process.cwd(), 'cv', cvFile);\nconst tailorPromptPath = path.join(process.cwd(), 'prompts', 'cv_tailor.md');\n\nconst baseCv = fs.readFileSync(cvPath, 'utf-8');\nconst tailorPrompt = fs.readFileSync(tailorPromptPath, 'utf-8');\n\nconst userMessage = `JOB DESCRIPTION:\\n${data.description}\\n\\n---\\n\\nBASE CV:\\n${baseCv}`;\n\nreturn [{\n  json: { ...data, baseCv, tailorPrompt, userMessage, cvVariant: variant }\n}];"
+      },
+      "id": "fn-select-cv",
+      "name": "Select CV Variant",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://localhost:11434/api/chat",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"qwen2.5:7b-instruct\",\n  \"messages\": [\n    {\"role\": \"system\", \"content\": {{JSON.stringify($json.tailorPrompt)}}},\n    {\"role\": \"user\", \"content\": {{JSON.stringify($json.userMessage)}}}\n  ],\n  \"stream\": false,\n  \"options\": {\"temperature\": 0.5, \"num_predict\": 2500}\n}",
+        "options": {
+          "timeout": 240000
+        }
+      },
+      "id": "http-ollama-cv",
+      "name": "Ollama — Tailor CV",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const fs = require('fs');\nconst path = require('path');\n\nconst response = $input.first().json;\nconst tailoredCv = (response.message && response.message.content) || response.response || '';\n\nif (!tailoredCv) throw new Error('Ollama returned empty CV');\n\nconst prev = $('Select CV Variant').first().json;\nconst ts = new Date().toISOString().replace(/[:.]/g, '-');\nconst filename = `tailored_cv_${prev.company}_${prev.job_title}_${ts}.md`\n  .replace(/[^a-zA-Z0-9_.-]/g, '_');\n\nconst outputDir = path.join(process.cwd(), 'output');\nif (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });\n\nconst filePath = path.join(outputDir, filename);\nfs.writeFileSync(filePath, tailoredCv, 'utf-8');\n\nreturn [{ json: { ...prev, tailoredCvPath: filePath, tailoredCvFilename: filename } }];"
+      },
+      "id": "fn-save-cv",
+      "name": "Save Tailored CV",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.cover_letter_needed}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-cover-letter",
+      "name": "IF: Cover Letter Needed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const fs = require('fs');\nconst path = require('path');\n\nconst data = $input.first().json;\nconst clPromptPath = path.join(process.cwd(), 'prompts', 'cover_letter.md');\nconst clPrompt = fs.readFileSync(clPromptPath, 'utf-8');\n\nconst userMessage = `Company: ${data.company}\\nJob Title: ${data.job_title}\\nLocation: ${data.location}\\n\\nJob Description:\\n${data.description}\\n\\nTop Matching Signals:\\n${(data.top_matches || []).join('\\n')}`;\n\nreturn [{ json: { ...data, clPrompt, clUserMessage: userMessage } }];"
+      },
+      "id": "fn-build-cl-prompt",
+      "name": "Build CL Prompt",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://localhost:11434/api/chat",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"qwen2.5:7b-instruct\",\n  \"messages\": [\n    {\"role\": \"system\", \"content\": {{JSON.stringify($json.clPrompt)}}},\n    {\"role\": \"user\", \"content\": {{JSON.stringify($json.clUserMessage)}}}\n  ],\n  \"stream\": false,\n  \"options\": {\"temperature\": 0.6, \"num_predict\": 800}\n}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "http-ollama-cl",
+      "name": "Ollama — Cover Letter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1560,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const fs = require('fs');\nconst path = require('path');\n\nconst response = $input.first().json;\nconst clText = (response.message && response.message.content) || response.response || '';\n\nif (!clText) throw new Error('Ollama returned empty cover letter');\n\nconst prev = $('Build CL Prompt').first().json;\nconst ts = new Date().toISOString().replace(/[:.]/g, '-');\nconst filename = `cover_letter_${prev.company}_${prev.job_title}_${ts}.txt`\n  .replace(/[^a-zA-Z0-9_.-]/g, '_');\n\nconst filePath = path.join(process.cwd(), 'output', filename);\nfs.writeFileSync(filePath, clText, 'utf-8');\n\nreturn [{ json: { ...prev, coverLetterPath: filePath, coverLetterFilename: filename, coverLetterSent: true } }];"
+      },
+      "id": "fn-save-cl",
+      "name": "Save Cover Letter",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1780,
+        200
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: /build-cv": {
+      "main": [
+        [
+          {
+            "node": "Select CV Variant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select CV Variant": {
+      "main": [
+        [
+          {
+            "node": "Ollama — Tailor CV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama — Tailor CV": {
+      "main": [
+        [
+          {
+            "node": "Save Tailored CV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Tailored CV": {
+      "main": [
+        [
+          {
+            "node": "IF: Cover Letter Needed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Cover Letter Needed?": {
+      "main": [
+        [
+          {
+            "node": "Build CL Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Build CL Prompt": {
+      "main": [
+        [
+          {
+            "node": "Ollama — Cover Letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama — Cover Letter": {
+      "main": [
+        [
+          {
+            "node": "Save Cover Letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Cover Letter": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "cv-builder-workflow"
+}

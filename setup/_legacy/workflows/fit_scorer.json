@@ -1,0 +1,178 @@
+{
+  "name": "Fit Scorer — Ollama (Qwen)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "score-job",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-score-job",
+      "name": "Webhook: /score-job",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const fs = require('fs');\nconst path = require('path');\n\nconst promptPath = path.join(process.cwd(), 'prompts', 'fit_scorer.md');\nlet systemPrompt;\ntry {\n  systemPrompt = fs.readFileSync(promptPath, 'utf-8');\n} catch (e) {\n  systemPrompt = `You are a precise job-fit scoring agent for Dev Rajput (MBA, 3+ years operations/client management). Score jobs 0-100 and return ONLY JSON with keys: score, verdict, top_matches, gaps, cv_variant, cover_letter_needed, rejection_reason. Thresholds: 75+ STRONG_MATCH, 60-74 GOOD_MATCH, below 60 REJECT.`;\n}\n\nconst body = $input.first().json.body || $input.first().json;\nconst { job_title, company, location, description, source_platform, job_url } = body;\n\nconst userMessage = `Job Title: ${job_title}\\nCompany: ${company}\\nLocation: ${location}\\n\\nJob Description:\\n${description}`;\n\nreturn [{\n  json: {\n    systemPrompt,\n    userMessage,\n    job_title,\n    company,\n    location,\n    description,\n    source_platform,\n    job_url\n  }\n}];"
+      },
+      "id": "fn-build-prompt",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://localhost:11434/api/chat",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"qwen2.5:7b-instruct\",\n  \"messages\": [\n    {\"role\": \"system\", \"content\": {{JSON.stringify($json.systemPrompt)}}},\n    {\"role\": \"user\", \"content\": {{JSON.stringify($json.userMessage)}}}\n  ],\n  \"stream\": false,\n  \"format\": \"json\",\n  \"options\": {\"temperature\": 0.3, \"num_predict\": 600}\n}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "http-ollama-scorer",
+      "name": "Ollama — Score",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const response = $input.first().json;\nconst text = (response.message && response.message.content) || response.response || '';\n\nif (!text) throw new Error('Ollama returned empty response');\n\nlet scoreData;\ntry {\n  const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\n  if (!jsonMatch) throw new Error('No JSON found');\n  scoreData = JSON.parse(jsonMatch[0]);\n} catch (e) {\n  throw new Error(`Failed to parse score JSON: ${e.message}. Raw: ${text.substring(0, 300)}`);\n}\n\nconst prev = $('Build Prompt').first().json;\nscoreData.job_title = prev.job_title;\nscoreData.company = prev.company;\nscoreData.location = prev.location;\nscoreData.description = prev.description;\nscoreData.source_platform = prev.source_platform;\nscoreData.job_url = prev.job_url;\nscoreData.scored_at = new Date().toISOString();\n\nreturn [{ json: scoreData }];"
+      },
+      "id": "fn-parse-score",
+      "name": "Parse Score",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.score}}",
+              "operation": "largerEqual",
+              "value2": 70
+            }
+          ]
+        }
+      },
+      "id": "if-threshold",
+      "name": "IF: Score >= 70?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://localhost:5678/webhook/log-application",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"company\": \"{{$json.company}}\", \"job_title\": \"{{$json.job_title}}\", \"platform\": \"{{$json.source_platform}}\", \"location\": \"{{$json.location}}\", \"fit_score\": {{$json.score}}, \"status\": \"REJECTED\", \"job_url\": \"{{$json.job_url}}\", \"notes\": \"{{$json.rejection_reason}}\"}",
+        "options": {}
+      },
+      "id": "http-log-rejection",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1340,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: /score-job": {
+      "main": [
+        [
+          {
+            "node": "Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Prompt": {
+      "main": [
+        [
+          {
+            "node": "Ollama — Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama — Score": {
+      "main": [
+        [
+          {
+            "node": "Parse Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Score": {
+      "main": [
+        [
+          {
+            "node": "IF: Score >= 70?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Score >= 70?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Log Rejection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "fit-scorer-workflow"
+}

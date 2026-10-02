@@ -1,0 +1,32 @@
+{
+  "_note": "Trusted answers for screening questions. Confirmed by the user on 2026-09-29: every skill = 3 years; self-rating 9/10 for core skills, 8/10 for the rest. Aliases help match question wording. Anything not listed here is never guessed.",
+  "defaultRating": 8,
+  "ratingScale": 10,
+  "skills": [
+    { "name": "Python", "years": 3, "rating": 9, "aliases": ["python3"] },
+    { "name": "Generative AI", "years": 3, "rating": 9, "aliases": ["genai", "gen ai", "generative ai", "llm", "llms", "large language model", "large language models", "gpt"] },
+    { "name": "RAG", "years": 3, "rating": 9, "aliases": ["retrieval augmented generation", "retrieval-augmented generation"] },
+    { "name": "LangChain", "years": 3, "rating": 9, "aliases": ["lang chain", "langchain agents"] },
+    { "name": "Prompt Engineering", "years": 3, "rating": 9, "aliases": ["prompting"] },
+    { "name": "SQL", "years": 3, "rating": 8, "aliases": ["postgresql", "postgres", "mysql"] },
+    { "name": "PySpark", "years": 3, "rating": 8, "aliases": ["spark", "apache spark"] },
+    { "name": "Vector Databases", "years": 3, "rating": 8, "aliases": ["vector database", "vector db", "pinecone", "chroma", "chromadb", "faiss"] },
+    { "name": "Embeddings", "years": 3, "rating": 8, "aliases": ["embedding"] },
+    { "name": "NLP", "years": 3, "rating": 8, "aliases": ["natural language processing"] },
+    { "name": "Machine Learning", "years": 3, "rating": 8, "aliases": ["ml", "ai/ml", "ai ml"] },
+    { "name": "PyTorch", "years": 3, "rating": 8, "aliases": ["torch"] },
+    { "name": "TensorFlow", "years": 3, "rating": 8, "aliases": [] },
+    { "name": "Hugging Face", "years": 3, "rating": 8, "aliases": ["huggingface", "transformers", "hugging face transformers"] },
+    { "name": "Fine-tuning", "years": 3, "rating": 8, "aliases": ["fine tuning", "lora", "qlora", "llm fine-tuning"] },
+    { "name": "FastAPI", "years": 3, "rating": 8, "aliases": ["fast api"] },
+    { "name": "AWS", "years": 3, "rating": 8, "aliases": ["amazon web services", "ec2", "s3", "lambda"] },
+    { "name": "Docker", "years": 3, "rating": 8, "aliases": [] },
+    { "name": "Airflow", "years": 3, "rating": 8, "aliases": ["apache airflow"] },
+    { "name": "MLflow", "years": 3, "rating": 8, "aliases": [] },
+    { "name": "ETL", "years": 3, "rating": 8, "aliases": ["etl pipelines", "data pipelines", "data engineering"] },
+    { "name": "Git", "years": 3, "rating": 8, "aliases": ["github", "version control"] },
+    { "name": "Tableau", "years": 3, "rating": 8, "aliases": [] },
+    { "name": "Azure", "years": 3, "rating": 8, "aliases": ["microsoft azure"] },
+    { "name": "Jupyter", "years": 3, "rating": 8, "aliases": ["jupyter notebook"] }
+  ]
+}

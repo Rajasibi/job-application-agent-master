@@ -1,0 +1,208 @@
+{
+  "id": "wttj-scraper-workflow",
+  "name": "Scraper — Welcome to the Jungle",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 5-23/6 * * *"
+            }
+          ]
+        }
+      },
+      "id": "bf2420a4-bec6-418f-a937-e5d4c96e59b6",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "9cec850e-f7e6-429b-892e-5aaa09eed1b9",
+      "name": "Run Manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "run-scraper-wttj",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "78400865-1786-4dd4-bdc6-b37570154ca2",
+      "webhookId": "ae9e766d-a798-4103-9c8d-c26985f69850",
+      "name": "Run From Dashboard",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9999/scrape/wttj",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({}) }}",
+        "options": {
+          "timeout": 2400000
+        }
+      },
+      "id": "f7db72b8-b3a9-4b0d-9c1d-4058fc0b1416",
+      "name": "Scrape wttj",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const r = $input.first().json;\nif (r.error) throw new Error('Scraper error: ' + r.error);\nreturn (r.jobs || []).map(j => ({ json: j }));"
+      },
+      "id": "63b39417-db75-4e4c-9cf8-513f0af34d1a",
+      "name": "One Item Per Job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5678/webhook/score-job",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 5400000
+        }
+      },
+      "id": "e002fbb6-c4f8-46cf-ab2d-dd5115a4cd70",
+      "name": "Score Job (one at a time)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "b04574aa-aca1-49c8-b263-3c6a27b0aaeb",
+      "name": "Loop Over Jobs",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        900,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Scrape wttj",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Manually": {
+      "main": [
+        [
+          {
+            "node": "Scrape wttj",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run From Dashboard": {
+      "main": [
+        [
+          {
+            "node": "Scrape wttj",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape wttj": {
+      "main": [
+        [
+          {
+            "node": "One Item Per Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One Item Per Job": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Jobs": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Score Job (one at a time)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score Job (one at a time)": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

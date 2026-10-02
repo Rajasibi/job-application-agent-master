@@ -1,0 +1,29 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Acme Careers - Apply</title></head>
+<body>
+<h1>Apply: GenAI Engineer</h1>
+<form id="f" onsubmit="event.preventDefault(); fetch('/__submitted');">
+  <label>First name * <input name="fn" required></label>
+  <label>Last name * <input name="ln" required></label>
+  <label>Email * <input type="email" name="em" required></label>
+  <label>Mobile number * <input type="tel" name="ph" required></label>
+  <label>Current CTC (in Lakhs) * <input name="cctc" required></label>
+  <label>Expected CTC (in Lakhs) * <input name="ectc" required></label>
+  <label>Notice period *
+    <select name="np" required><option value="">Select</option><option value="imm">Immediate</option><option value="15">15 Days</option><option value="30">30 Days</option></select>
+  </label>
+  <fieldset><legend>Are you willing to relocate?</legend>
+    <label><input type="radio" name="rel" value="y" required>Yes</label>
+    <label><input type="radio" name="rel" value="n">No</label>
+  </fieldset>
+  <label>Preferred location <input name="pl"></label>
+  <label>Years of experience in Python * <input type="number" name="py" required></label>
+  <label>Rate your LangChain skill (1-10)
+    <select name="lc"><option value="">--</option><option>7</option><option>8</option><option>9</option><option>10</option></select>
+  </label>
+  <label>Resume / CV * <input type="file" name="cv" required></label>
+  <label>Cover letter (optional file) <input type="file" name="cl"></label>
+  <label>Middle name <input name="mn"></label>
+  <button type="submit" onclick="fetch('/__submitted')">Submit application</button>
+</form>
+</body></html>

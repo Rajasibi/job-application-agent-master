@@ -1,0 +1,18 @@
+{
+  "pending": [
+    {
+      "id": "t1-1779363166532-tu2e9",
+      "queuedAt": "2026-05-21T11:32:46.532Z",
+      "company": "EY",
+      "job_title": "Senior Project Manager - Business Consulting",
+      "location": "India",
+      "job_url": "https://careers.ey.com/ey/job/test",
+      "score": 88,
+      "tailoredCvPath": "C:/Users/Dev/Desktop/Job Agents/job-agent/cv/cv_variant_a.md",
+      "coverLetterPath": "",
+      "status": "SUBMITTED",
+      "openedAt": "2026-05-21T11:39:27.318Z",
+      "submittedAt": "2026-05-21T11:39:36.074Z"
+    }
+  ]
+}

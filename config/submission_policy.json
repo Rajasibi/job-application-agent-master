@@ -1,0 +1,11 @@
+{
+  "_note": "Final-submit policy. 'manual' = the agent fills and stops; you submit. 'auto' = for jobs scoring at least autoMinScore, the agent clicks the site's own one-click Apply ONCE in a visible window and verifies the confirmation (Naukri and foundit have verified handlers). Indeed is always manual. Company-site (ATS) forms are filled but never submitted. Set a platform back to 'manual' to stop auto-applying.",
+  "default": "manual",
+  "autoMinScore": 80,
+  "platforms": {
+    "naukri": "manual",
+    "indeed": "manual",
+    "foundit": "manual"
+  },
+  "domains": {}
+}

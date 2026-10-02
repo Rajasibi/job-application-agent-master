@@ -1,0 +1,10 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Apply</title></head>
+<body>
+<form onsubmit="event.preventDefault(); fetch('/__submitted');">
+  <label>Full name <input name="n"></label>
+  <label>Email <input type="email" name="e"></label>
+  <div class="g-recaptcha" data-sitekey="test-site-key"></div>
+  <button type="submit" onclick="fetch('/__submitted')">Submit</button>
+</form>
+</body></html>
